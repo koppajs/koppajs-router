@@ -141,9 +141,11 @@ router.navigate({
 ## Local Commands
 
 ```bash
+pnpm install
 pnpm run typecheck
 pnpm run lint
 pnpm run test:unit
+pnpm run test:ci
 pnpm run check:package
 pnpm run build
 pnpm run check
@@ -159,5 +161,6 @@ This package keeps its architecture memory and governance in the repository:
 - `ARCHITECTURE.md` plus `docs/architecture/` for system structure
 - `DEVELOPMENT_RULES.md` for implementation constraints
 - `TESTING_STRATEGY.md` plus `docs/quality/` for verification policy
+- `RELEASE.md` for the tag-driven release workflow
 - `docs/specs/` for behavior specs
 - `docs/adr/` for architecture decision records

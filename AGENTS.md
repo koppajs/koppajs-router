@@ -33,6 +33,8 @@ website-spezifischer Copy oder Seitenlogik.
    Implementierung -> Doku.
 6. Wenn sich Architektur, Modulgrenzen, Workflows oder Qualitaetsregeln
    aendern, muss die Meta Layer im selben Change aktualisiert werden.
+7. Wenn sich Release-, Publish- oder Versionsregeln aendern, aktualisiere
+   `RELEASE.md`, `.github/workflows/` und die Package-Metadaten zusammen.
 
 ## Pflicht-Checks
 

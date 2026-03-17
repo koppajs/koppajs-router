@@ -69,5 +69,7 @@ shape or document a new structure in `ARCHITECTURE.md` and
 - Add or update tests before or alongside implementation.
 - Update `README.md` whenever the public API, setup contract, or usage guidance
   changes.
+- Update `RELEASE.md` and the workflow config when release, publish, or version
+  management behavior changes.
 - Update the meta layer whenever architecture, quality policy, or working
   agreements change.

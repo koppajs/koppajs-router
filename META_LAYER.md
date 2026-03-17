@@ -11,6 +11,7 @@ workflow aligned with the actual package.
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md)
 - [`DEVELOPMENT_RULES.md`](./DEVELOPMENT_RULES.md)
 - [`TESTING_STRATEGY.md`](./TESTING_STRATEGY.md)
+- [`RELEASE.md`](./RELEASE.md)
 - [`DECISIONS.md`](./DECISIONS.md)
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - [`ROADMAP.md`](./ROADMAP.md)

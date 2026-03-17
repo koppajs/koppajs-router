@@ -64,7 +64,16 @@ tests whether or not coverage percentages move.
 
 Run these checks before considering work complete:
 
+- `pnpm install`
 - `pnpm run lint`
 - `pnpm run test:unit`
+- `pnpm run test:ci`
 - `pnpm run build`
+- `pnpm run check:package`
 - `pnpm run check`
+
+## CI And Release Validation
+
+- `.github/workflows/ci.yml` runs the package quality gate on Node 20 and 22.
+- `.github/workflows/release.yml` reruns the same checks before publishing a
+  tagged release to npm.

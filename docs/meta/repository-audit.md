@@ -13,6 +13,8 @@ Date: 2026-03-17
   Vitest.
 - Build output and published entrypoints now follow one explicit `dist/`
   contract, with an automated manifest/build consistency check.
+- The repository now has package-local CI, tagged release automation, and
+  lightweight commit-quality hooks aligned with `koppajs-core`.
 
 ## Gaps That Were Addressed
 
@@ -26,17 +28,20 @@ Date: 2026-03-17
 - Module boundaries were implicit in code rather than documented as architectural
   intent.
 - The package entrypoint strategy, the broader runtime option surface, and the
-  deliberate absence of Playwright, Stylelint, and package-local hooks were
+  deliberate absence of Playwright and Stylelint were
   underdocumented.
+- Release workflow, publish metadata, and Conventional Commit enforcement were
+  missing even though they are useful and proportional for this standalone repo.
 
 ## Watchpoints For Future Audits
 
 - `src/index.ts` is still a single file; if it grows, the documented logical
   boundaries should become physical module boundaries.
-- There is still no package-local CI workflow file. Script-based verification
-  is currently the authoritative quality gate.
 - Some public/runtime edge cases are still only partially covered by tests,
   especially broader click-interception and route-resolution error-path
   contracts.
+- The GitHub release workflow depends on external secrets and branch discipline;
+  that operational contract should be reviewed whenever the release model
+  changes.
 - If the package starts supporting more environments or route features, the spec
   and ADR layers should expand with it.

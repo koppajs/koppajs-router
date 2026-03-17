@@ -36,6 +36,8 @@ runtime more than fast but inconsistent changes.
   `docs/specs/router-runtime.md`, and the appropriate tests.
 - If a change introduces or removes a recurring architectural pattern, create or
   update an ADR in `docs/adr/`.
+- If a change affects release, publish, or versioning behavior, update
+  `RELEASE.md`, the workflow files, and the relevant package metadata together.
 - Do not move consumer-owned concerns such as route content, application copy,
   or app-specific navigation rules into this package.
 - Keep dependencies lean. New runtime dependencies require explicit written

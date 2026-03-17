@@ -13,7 +13,8 @@ When project documents disagree, resolve the conflict in this order:
    [`docs/quality/`](./docs/quality/)
 7. [`AGENTS.md`](./AGENTS.md) for package-local agent workflow details
 8. [`CONTRIBUTING.md`](./CONTRIBUTING.md)
-9. [`README.md`](./README.md) and examples
+9. [`RELEASE.md`](./RELEASE.md) for release and publish process details
+10. [`README.md`](./README.md) and examples
 
 ## Conflict Resolution Notes
 

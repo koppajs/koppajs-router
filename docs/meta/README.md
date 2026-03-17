@@ -16,8 +16,9 @@ Key files in this directory:
 - Tests live in `tests/unit/router.test.ts` and exercise both pure routing logic
   and jsdom-backed runtime behavior.
 - Tooling is intentionally light: TypeScript, ESLint, Prettier, and Vitest.
-- There is no package-local CI workflow file today, so the script-based quality
-  gates are the canonical verification path.
+- GitHub Actions mirror the local quality gate and tagged release flow.
+- Release automation and commit-quality enforcement are intentionally lightweight
+  and stay close to the root package config.
 
 ## Why The Meta Layer Exists
 

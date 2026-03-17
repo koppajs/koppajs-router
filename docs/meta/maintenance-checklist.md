@@ -20,6 +20,8 @@ Use this checklist whenever the repository changes.
 - New local hook automation:
   document why it exists, keep it fast, and mirror the policy in
   `docs/quality/README.md`.
+- New release workflow, npm publish rule, or versioning convention:
+  update `RELEASE.md`, `.github/workflows/`, and the affected root docs.
 - New quality gate, test level, or verification expectation:
   update `TESTING_STRATEGY.md` and `docs/quality/README.md`.
 - New collaboration workflow for AI or developers:
