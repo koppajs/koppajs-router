@@ -139,6 +139,13 @@ const installScrollState = () => {
 describe("koppajs-router", () => {
   beforeEach(() => {
     registerTestPage("home-page", '<h1 id="home-heading">Home</h1>');
+    registerTestPage("blog-page", '<section id="blog-overview">Blog overview</section>');
+    registerTestPage("blog-post-page", '<article id="blog-post">Blog post</article>');
+    registerTestPage("blog-archive-page", '<section id="blog-archive">Archive</section>');
+    registerTestPage(
+      "blog-not-found-page",
+      '<section id="blog-not-found">Missing blog page</section>',
+    );
     registerTestPage(
       "guides-introduction-page",
       '<section id="guide-introduction">Guide</section>',
@@ -149,6 +156,7 @@ describe("koppajs-router", () => {
       '<section id="service-detail">Service detail</section>',
     );
     registerTestPage("contact-page", '<section id="contact-form">Contact form</section>');
+    registerTestPage("not-found-page", '<section id="not-found-page">Not found</section>');
 
     document.head.innerHTML = "";
     document.body.innerHTML = "";
@@ -227,6 +235,90 @@ describe("koppajs-router", () => {
     expect(redirectedRoute.redirectedFrom?.path).toBe("/guides");
     expect(redirectedRoute.redirectedFrom?.pattern).toBe("/guides");
     expect(redirectedRoute.redirectedFrom?.record.name).toBe("guides");
+  });
+
+  it("prioritizes static routes over dynamic ones and uses wildcard routes as the explicit not-found contract", () => {
+    const prioritizedRoutes = [
+      {
+        path: "/",
+        name: "home",
+        title: "Home",
+        description: "Landing page",
+        componentTag: "home-page",
+      },
+      {
+        path: "/blog",
+        name: "blog",
+        title: "Blog",
+        description: "Blog overview",
+        componentTag: "blog-page",
+        children: [
+          {
+            path: ":slug",
+            name: "blog-post",
+            title: "Blog post",
+            description: "Blog post page",
+            componentTag: "blog-post-page",
+          },
+          {
+            path: "archive",
+            name: "blog-archive",
+            title: "Archive",
+            description: "Archive page",
+            componentTag: "blog-archive-page",
+          },
+          {
+            path: "*",
+            title: "Missing blog page",
+            description: "Blog not found",
+            componentTag: "blog-not-found-page",
+          },
+        ],
+      },
+    ] satisfies readonly TestRoute[];
+
+    const archiveRoute = resolveRoute(prioritizedRoutes, "/blog/archive");
+
+    expect(archiveRoute.name).toBe("blog-archive");
+    expect(archiveRoute.pattern).toBe("/blog/archive");
+    expect(archiveRoute.path).toBe("/blog/archive");
+
+    const postRoute = resolveRoute(prioritizedRoutes, "/blog/launch-post");
+
+    expect(postRoute.name).toBe("blog-post");
+    expect(postRoute.pattern).toBe("/blog/:slug");
+    expect(postRoute.params).toEqual({
+      slug: "launch-post",
+    });
+
+    const catchAllRoute = resolveRoute(prioritizedRoutes, "/blog/archive/2024?ref=nav#deep-dive");
+
+    expect(catchAllRoute.componentTag).toBe("blog-not-found-page");
+    expect(catchAllRoute.pattern).toBe("/blog/*");
+    expect(catchAllRoute.path).toBe("/blog/archive/2024");
+    expect(catchAllRoute.fullPath).toBe("/blog/archive/2024?ref=nav#deep-dive");
+  });
+
+  it("throws a clear error for unmatched paths when no wildcard route exists", () => {
+    expect(() => resolveRoute(routes, "/missing")).toThrow(
+      'KoppajsRouter could not match path "/missing". Add a "*" route to handle unmatched paths.',
+    );
+
+    document.body.innerHTML = '<main id="outlet"></main>';
+    window.history.replaceState({}, "", "/missing");
+
+    const outlet = document.querySelector<HTMLElement>("#outlet");
+    expect(outlet).toBeTruthy();
+
+    const router = new KoppajsRouter({
+      routes,
+      outlet: outlet!,
+      root: document,
+    });
+
+    expect(() => router.init()).toThrow(
+      'KoppajsRouter could not match path "/missing". Add a "*" route to handle unmatched paths.',
+    );
   });
 
   it("navigates by name, updates document metadata, and emits a rich route-change event", async () => {
@@ -341,6 +433,45 @@ describe("koppajs-router", () => {
     await flushRouterWork();
     expect(window.location.pathname).toBe("/contact");
     expect(window.location.hash).toBe("#contact-form");
+  });
+
+  it("renders an explicit wildcard route when the current location is unmatched", async () => {
+    const routesWithNotFound = [
+      ...routes,
+      {
+        path: "*",
+        name: "not-found",
+        title: "Not found",
+        description: "Missing page",
+        componentTag: "not-found-page",
+        meta: {
+          section: "missing",
+        },
+      },
+    ] satisfies readonly TestRoute[];
+
+    vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+
+    document.body.innerHTML = '<main id="outlet"></main>';
+    window.history.replaceState({}, "", "/missing?ref=nav#not-found-page");
+
+    const outlet = document.querySelector<HTMLElement>("#outlet");
+    expect(outlet).toBeTruthy();
+
+    const router = new KoppajsRouter({
+      routes: routesWithNotFound,
+      outlet: outlet!,
+      root: document,
+    });
+
+    router.init();
+    await flushRouterWork();
+
+    expect(outlet?.querySelector("not-found-page")).toBeTruthy();
+    expect(document.title).toBe("Not found");
+    expect(router.getCurrentRoute().pattern).toBe("/*");
+    expect(router.getCurrentRoute().path).toBe("/missing");
+    expect(router.getCurrentRoute().fullPath).toBe("/missing?ref=nav#not-found-page");
   });
 
   it("keeps excluded links out of the active-state contract and matches links by path only", () => {

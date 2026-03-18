@@ -15,8 +15,9 @@ four logical layers:
 1. Public contract: exported route types, router options, helper constants, and
    pure helper functions such as `normalizePath`, `toHref`, and `resolveRoute`.
 2. Route registry and resolution engine: matcher compilation, nested route
-   flattening, param interpolation, redirect following, and immutable
-   `ResolvedRoute` creation.
+   flattening, route-specificity ranking, param interpolation, redirect
+   following, explicit catch-all handling, and immutable `ResolvedRoute`
+   creation.
 3. DOM synchronization helpers: document description updates, route-link active
    state synchronization, deferred paint waiting, and anchor lookup.
 4. Runtime orchestration: `KoppajsRouter`, which wires browser events, history
@@ -48,9 +49,13 @@ The package is responsible for:
 - normalizing paths, hashes, query strings, and base paths
 - resolving direct-path and named-route targets against flat or nested route
   definitions
+- ranking matching routes so static segments win over dynamic params, and
+  dynamic params win over wildcard catch-all routes
 - preserving route-record immutability by returning derived resolved-route
   state instead of mutating the input route table
 - translating between app paths and browser hrefs beneath an optional base path
+- failing clearly on unmatched paths unless the consumer declares an explicit
+  `*` catch-all route
 - rendering the final route element into an outlet and updating document title
   and description
 - synchronizing active route links through one shared helper path
@@ -119,9 +124,13 @@ On teardown:
 
 - The router remains History API based.
 - Base-path translation must work for root deployments and subpath deployments.
+- Static route segments outrank dynamic segments, and dynamic segments outrank
+  wildcard catch-all segments during matching.
 - Active links are matched by normalized route path only, not by query or hash.
 - Route records are input data and must never be mutated during matching or
   navigation.
+- Unmatched paths never silently fall back to the first route. They either hit
+  an explicit `*` catch-all route or surface a resolution error.
 - Redirect resolution is bounded by `MAX_REDIRECT_DEPTH` to prevent loops.
 - `KoppajsRouter` can only render a final route that defines `title`,
   `description`, and `componentTag`.

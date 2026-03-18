@@ -145,6 +145,11 @@ type RouteEntry<TRoute extends RouteDefinition = RouteDefinition> = {
   paramNames: readonly string[];
 };
 
+type RankedRouteEntry<TRoute extends RouteDefinition = RouteDefinition> = RouteEntry<TRoute> & {
+  specificity: readonly number[];
+  insertionOrder: number;
+};
+
 type RouteRegistry<TRoute extends RouteDefinition = RouteDefinition> = {
   entries: readonly RouteEntry<TRoute>[];
   names: ReadonlyMap<string, RouteEntry<TRoute>>;
@@ -327,6 +332,43 @@ const buildRoutePath = (parentPath: string | null, routePath: string): string =>
   );
 };
 
+const getRouteSpecificity = (templatePath: string): readonly number[] => {
+  const normalizedTemplatePath = normalizePath(templatePath);
+
+  if (normalizedTemplatePath === "/") {
+    return [4];
+  }
+
+  return normalizedTemplatePath
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => {
+      if (segment === "*") {
+        return 1;
+      }
+
+      if (segment.startsWith(":")) {
+        return 2;
+      }
+
+      return 3;
+    });
+};
+
+const compareRouteSpecificity = (left: readonly number[], right: readonly number[]): number => {
+  const maxLength = Math.max(left.length, right.length);
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const difference = (right[index] ?? 0) - (left[index] ?? 0);
+
+    if (difference !== 0) {
+      return difference;
+    }
+  }
+
+  return right.length - left.length;
+};
+
 const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const compileRouteMatcher = (templatePath: string): Pick<RouteEntry, "matcher" | "paramNames"> => {
@@ -342,6 +384,10 @@ const compileRouteMatcher = (templatePath: string): Pick<RouteEntry, "matcher" |
     .split("/")
     .filter(Boolean)
     .map((segment) => {
+      if (segment === "*") {
+        return ".*";
+      }
+
       if (!segment.startsWith(":")) {
         return escapeRegex(segment);
       }
@@ -361,8 +407,9 @@ const compileRouteMatcher = (templatePath: string): Pick<RouteEntry, "matcher" |
 const buildRouteRegistry = <TRoute extends RouteDefinition>(
   routes: readonly TRoute[],
 ): RouteRegistry<TRoute> => {
-  const entries: RouteEntry<TRoute>[] = [];
+  const entries: RankedRouteEntry<TRoute>[] = [];
   const names = new Map<string, RouteEntry<TRoute>>();
+  let insertionOrder = 0;
 
   const visit = (routeList: readonly TRoute[], parentPath: string | null): void => {
     routeList.forEach((route) => {
@@ -373,9 +420,12 @@ const buildRouteRegistry = <TRoute extends RouteDefinition>(
         fullPathTemplate,
         matcher: compiled.matcher,
         paramNames: compiled.paramNames,
-      } satisfies RouteEntry<TRoute>;
+        specificity: getRouteSpecificity(fullPathTemplate),
+        insertionOrder,
+      } satisfies RankedRouteEntry<TRoute>;
 
       entries.push(entry);
+      insertionOrder += 1;
 
       if (route.name) {
         const existing = names.get(route.name);
@@ -396,7 +446,23 @@ const buildRouteRegistry = <TRoute extends RouteDefinition>(
   visit(routes, null);
 
   return {
-    entries,
+    entries: entries
+      .slice()
+      .sort((left, right) => {
+        const specificityComparison = compareRouteSpecificity(left.specificity, right.specificity);
+
+        if (specificityComparison !== 0) {
+          return specificityComparison;
+        }
+
+        return left.insertionOrder - right.insertionOrder;
+      })
+      .map((entry) => ({
+        record: entry.record,
+        fullPathTemplate: entry.fullPathTemplate,
+        matcher: entry.matcher,
+        paramNames: entry.paramNames,
+      })),
     names,
   };
 };
@@ -488,6 +554,21 @@ const createResolvedRoute = <TRoute extends RouteDefinition>(
   ...(redirectedFrom ? { redirectedFrom } : {}),
 });
 
+const isCatchAllRouteEntry = (entry: RouteEntry): boolean =>
+  normalizePath(entry.fullPathTemplate).split("/").filter(Boolean).includes("*");
+
+const resolveMatchedPath = <TRoute extends RouteDefinition>(
+  entry: RouteEntry<TRoute>,
+  requestedPath: string,
+  params: RouteParams,
+): string => {
+  if (isCatchAllRouteEntry(entry)) {
+    return normalizePath(requestedPath);
+  }
+
+  return applyParamsToPathTemplate(entry.fullPathTemplate, params);
+};
+
 const findMatchingEntry = <TRoute extends RouteDefinition>(
   registry: RouteRegistry<TRoute>,
   path: string,
@@ -505,16 +586,9 @@ const findMatchingEntry = <TRoute extends RouteDefinition>(
     }
   }
 
-  const fallbackEntry = registry.entries[0];
-
-  if (!fallbackEntry) {
-    throw new Error("KoppajsRouter requires at least one route.");
-  }
-
-  return {
-    entry: fallbackEntry,
-    params: matchRouteEntry(fallbackEntry, fallbackEntry.fullPathTemplate) ?? {},
-  };
+  throw new Error(
+    `KoppajsRouter could not match path "${normalizedPath}". Add a "*" route to handle unmatched paths.`,
+  );
 };
 
 const resolveNamedRouteTarget = <TRoute extends RouteDefinition>(
@@ -587,7 +661,7 @@ const resolveRouteFromParsedTarget = <TRoute extends RouteDefinition>(
   }
 
   const { entry, params } = findMatchingEntry(registry, target.path);
-  const currentPath = applyParamsToPathTemplate(entry.fullPathTemplate, params);
+  const currentPath = resolveMatchedPath(entry, target.path, params);
   const currentRedirectSource =
     redirectedFrom ?? createRedirectedRoute(entry, currentPath, params, target.query, target.hash);
 

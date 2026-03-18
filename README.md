@@ -10,8 +10,11 @@ The package owns:
 
 - path normalization and base-path-aware href translation
 - flat and nested route-record resolution
+- deterministic route matching priority: static segments before dynamic params
+  before `*` catch-all routes
 - named routes, params, redirects, and richer resolved-route state
 - query/hash-aware History API navigation
+- explicit unmatched-path handling through `path: "*"` routes
 - anchor scrolling and history scroll restoration
 - document title and meta-description updates
 - active route-link synchronization
@@ -69,6 +72,13 @@ const routes = [
       },
     ],
   },
+  {
+    path: "*",
+    name: "not-found",
+    title: "Not found",
+    description: "Missing page",
+    componentTag: "not-found-page",
+  },
 ] satisfies readonly RouteDefinition[];
 
 const outlet = document.querySelector<HTMLElement>("#app-outlet");
@@ -103,7 +113,7 @@ router.navigate({
 - `normalizeBasePath()`: normalize configured base paths such as `/preview/`
 - `toHref()`: map a route path string, including optional query/hash, to a browser href beneath the configured base path
 - `fromLocationPathname()`: translate a browser pathname back into an app route path
-- `resolveRoute()`: resolve either a direct path or a named route target object against a provided route table
+- `resolveRoute()`: resolve either a direct path or a named route target object against a provided route table, throwing a clear error when no route matches and no `*` catch-all route is defined
 - `resolveRouteByName()`: resolve a named route target with params/query/hash
 - `router.resolve()` / `router.resolveByName()`: instance helpers that return the active `ResolvedRoute`
 - `router.navigate()` / `router.navigateByName()`: direct-path and named-route navigation helpers
@@ -127,6 +137,16 @@ router.navigate({
 - `scrollBehavior`: control default forward-navigation scroll behavior
 - `linkSelector`, `activeClassName`, `activeAttributeName`,
   `shouldSetActiveState`: customize active-link synchronization
+
+## Route Matching Rules
+
+- static path segments win over dynamic `:param` segments, even if the dynamic
+  route appears earlier in the route table
+- dynamic `:param` segments win over `*` catch-all routes
+- unmatched paths throw a clear error unless a matching `path: "*"` route is
+  present
+- catch-all routes preserve the unmatched browser path in the resolved route's
+  `path` and `fullPath`
 
 ## Build And Distribution
 
