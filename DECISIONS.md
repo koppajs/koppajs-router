@@ -10,6 +10,8 @@ package adopts decisions from a broader KoppaJS workspace.
 - Route content, application copy, and page registration stay in the consumer.
 - Base-path handling and active-link synchronization are regression-sensitive
   contracts.
+- The published package stays ESM-only, and release candidates must pass a
+  tarball-based consumer smoke check.
 - Public API changes require tests, documentation updates, and usually a spec
   update.
 - Package governance stays thin: only package-local decisions belong here,

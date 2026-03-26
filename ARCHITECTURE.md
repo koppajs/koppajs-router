@@ -147,15 +147,22 @@ be updated in the same change.
 
 ## Packaging And Entrypoints
 
-The repository currently builds `dist/` through `tsc -p tsconfig.build.json`,
-and the published package manifest points `main`, `module`, `types`, and the
-primary `exports` entry at `dist/`. That means `dist/` is the canonical
-distribution contract, while [`src/index.ts`](./src/index.ts) remains the
-authoring source inside the repository.
+The repository currently builds ESM output into `dist/` through
+`tsc -p tsconfig.build.json`, and the published package manifest points `main`,
+`module`, `types`, and the primary `exports` entry at that output. That means
+`dist/` is the canonical distribution contract, while
+[`src/index.ts`](./src/index.ts) remains the authoring source inside the
+repository.
+
+The published contract is intentionally ESM-only. Consumers import the package
+through standard `import` syntax; CommonJS `require()` is not a supported
+compatibility target for this package.
 
 The `check:package` script validates that the manifest and build output stay in
-sync. If the package's distribution strategy changes again, update this file,
-`README.md`, and any affected decision records in the same change.
+sync, while `test:package` packs the tarball, installs it into a clean
+temporary consumer, and imports the published entrypoint. If the package's
+distribution strategy changes again, update this file, `README.md`, and any
+affected decision records in the same change.
 
 ## Change Triggers
 

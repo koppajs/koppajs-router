@@ -70,10 +70,11 @@ Run these checks before considering work complete:
 - `pnpm run test:ci`
 - `pnpm run build`
 - `pnpm run check:package`
+- `pnpm run test:package`
 - `pnpm run check`
 
 ## CI And Release Validation
 
 - `.github/workflows/ci.yml` runs the package quality gate on Node 20 and 22.
-- `.github/workflows/release.yml` reruns the same checks before publishing a
-  tagged release to npm.
+- `.github/workflows/release.yml` reruns the same checks, including the packed
+  tarball consumer smoke test, before publishing a tagged release to npm.

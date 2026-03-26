@@ -19,6 +19,8 @@ This directory captures the repository's practical quality gates.
   `pnpm run build`
 - Package manifest/build consistency:
   `pnpm run check:package`
+- Tarball consumer smoke test:
+  `pnpm run test:package`
 - Full package gate:
   `pnpm run check`
 

@@ -19,11 +19,11 @@
   "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TheSortex/koppajs-router.git"
+    "url": "https://github.com/koppajs/koppajs-router.git"
   },
-  "homepage": "https://github.com/TheSortex/koppajs-router#readme",
+  "homepage": "https://github.com/koppajs/koppajs-router#readme",
   "bugs": {
-    "url": "https://github.com/TheSortex/koppajs-router/issues"
+    "url": "https://github.com/koppajs/koppajs-router/issues"
   },
   "publishConfig": {
     "access": "public"
@@ -55,8 +55,9 @@
     "test:unit:watch": "vitest --config vitest.config.ts",
     "test:coverage": "pnpm run test:unit",
     "test:ci": "pnpm run test:unit",
+    "test:package": "node ./scripts/test-package-consumer.mjs",
     "test": "pnpm run typecheck && pnpm run test:unit",
-    "check": "pnpm run lint && pnpm run test && pnpm run build && pnpm run check:package"
+    "check": "pnpm run lint && pnpm run test && pnpm run build && pnpm run check:package && pnpm run test:package"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",

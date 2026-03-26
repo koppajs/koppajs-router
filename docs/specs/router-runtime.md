@@ -32,7 +32,7 @@ link-matching behavior, event naming, and scroll behavior.
 - DOM side effects through `KoppajsRouter`, including outlet rendering,
   document title and description updates, active-link updates, route-change
   events, and scroll behavior
-- publishable build artifacts in `dist/`, with package manifest entrypoints
+- publishable ESM build artifacts in `dist/`, with package manifest entrypoints
   expected to resolve to that output
 
 ## Constraints
@@ -50,6 +50,8 @@ link-matching behavior, event naming, and scroll behavior.
 - Unmatched paths must not silently fall back to the first route. They must
   either resolve through an explicit `*` catch-all route or throw a clear
   error.
+- The published package is ESM-only. Standard `import` is part of the contract;
+  CommonJS `require()` compatibility is not.
 - `KoppajsRouter` may only render a final route that provides `componentTag`,
   `title`, and `description`.
 
@@ -90,3 +92,5 @@ link-matching behavior, event naming, and scroll behavior.
 - Excluded links do not receive active-state attributes.
 - Anchor navigation and history traversal produce the documented scroll
   behavior.
+- A tarball produced from the package can be installed into a clean temporary
+  consumer and imported through the published ESM entrypoint.

@@ -50,6 +50,7 @@ Before cutting a release, ensure all of the following are true:
 - `CHANGELOG.md` contains the corresponding release notes.
 - The lockfile is up to date.
 - The release content has been reviewed.
+- npm publish rights for the `@koppajs` scope have been confirmed.
 - The repository secrets required by GitHub Actions are configured.
 
 Tooling expectations for local verification:
@@ -95,6 +96,8 @@ Recommended commands:
 
 ```bash
 pnpm install
+pnpm run build
+pnpm run test:package
 pnpm run check
 ```
 
@@ -105,6 +108,8 @@ Why this matters:
 - `pnpm run build` verifies the publishable package output
 - `pnpm run check:package` verifies that manifest entrypoints and build output
   stay aligned
+- `pnpm run test:package` verifies that the packed ESM tarball installs and
+  imports in a clean temporary consumer
 
 The published package contents are controlled by the `files` field in
 `package.json`. At the moment, the publish payload is intentionally limited to:

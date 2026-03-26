@@ -4,6 +4,14 @@
 of the website root and exposes it as a standalone package for KoppaJS
 applications.
 
+## Runtime And Module Compatibility
+
+- The published package is ESM-only. Import it with standard `import` syntax,
+  not `require()`.
+- `KoppajsRouter` is a browser runtime built around the DOM and History API.
+- The pure helpers such as `resolveRoute()`, `toHref()`, and
+  `fromLocationPathname()` remain usable in non-browser ESM contexts.
+
 ## Scope
 
 The package owns:
@@ -153,10 +161,14 @@ router.navigate({
 - source code lives in `src/`
 - `pnpm run build` emits the publishable library to `dist/`
 - the package manifest exports `dist/index.js` and `dist/index.d.ts`
+- the published package is ESM-only and is intended to be consumed through
+  `import`
 - when consuming this repository directly instead of a published package, build
   first so `dist/` exists
 - `pnpm run check:package` verifies that manifest entrypoints and build output
   stay aligned
+- `pnpm run test:package` packs the tarball, installs it into a clean temporary
+  consumer, and imports the published entrypoint
 
 ## Local Commands
 
@@ -168,6 +180,7 @@ pnpm run test:unit
 pnpm run test:ci
 pnpm run check:package
 pnpm run build
+pnpm run test:package
 pnpm run check
 ```
 
