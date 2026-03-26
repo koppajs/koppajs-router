@@ -1,0 +1,87 @@
+{
+  "name": "@koppajs/koppajs-router",
+  "version": "0.1.0",
+  "description": "Reusable History API router primitives for KoppaJS applications.",
+  "author": "Bastian Bensch",
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@10.17.1",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/koppajs/koppajs-router.git"
+  },
+  "homepage": "https://github.com/koppajs/koppajs-router#readme",
+  "bugs": {
+    "url": "https://github.com/koppajs/koppajs-router/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=10.17.1"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "pnpm run clean && tsc -p tsconfig.build.json",
+    "check:package": "node -e \"const fs=require('node:fs'); const pkg=JSON.parse(fs.readFileSync('package.json','utf8')); const entry=pkg.exports['.']; const paths=[pkg.main,pkg.module,pkg.types,entry.import,entry.types]; const missing=paths.filter((file)=>!fs.existsSync(file)); if(missing.length>0){ console.error('Missing package entrypoints:', missing.join(', ')); process.exit(1); }\"",
+    "prepare": "node -e \"const fs=require('node:fs'); const cp=require('node:child_process'); if(process.env.HUSKY==='0'){ console.log('Skipping husky install (HUSKY=0).'); process.exit(0); } if(!fs.existsSync('.git')){ console.log('Skipping husky install (no .git directory found).'); process.exit(0); } cp.execSync('pnpm exec husky',{stdio:'inherit'});\"",
+    "lint": "pnpm run lint:ts && pnpm run format:check",
+    "lint:fix": "pnpm run lint:ts -- --fix && pnpm run format",
+    "lint:staged": "lint-staged --config lint-staged.config.mjs",
+    "lint:ts": "eslint . --ext .ts --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:unit": "vitest run --config vitest.config.ts --coverage",
+    "test:unit:watch": "vitest --config vitest.config.ts",
+    "test:coverage": "pnpm run test:unit",
+    "test:ci": "pnpm run test:unit",
+    "test:package": "node ./scripts/test-package-consumer.mjs",
+    "test": "pnpm run typecheck && pnpm run test:unit",
+    "check": "pnpm run lint && pnpm run test && pnpm run build && pnpm run check:package && pnpm run test:package"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@types/node": "^24.5.2",
+    "@typescript-eslint/eslint-plugin": "^8.44.0",
+    "@typescript-eslint/parser": "^8.44.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "jsdom": "^26.1.0",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "keywords": [
+    "koppajs",
+    "router",
+    "history-api",
+    "spa",
+    "typescript",
+    "routing",
+    "history"
+  ]
+}
