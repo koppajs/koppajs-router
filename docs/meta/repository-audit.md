@@ -1,6 +1,17 @@
 # Repository Audit Snapshot
 
-Date: 2026-03-17
+Date: 2026-03-26
+
+## Repository Classification
+
+- `repo_type`: reusable package
+- `runtime_responsibility`: browser router runtime plus package build and
+  publish verification
+- `build_time_responsibility`: TypeScript compilation, linting, unit testing,
+  tarball smoke testing, and release automation
+- `ui_surface`: none inside the package; jsdom-backed DOM fixtures exist only
+  for runtime verification
+- `maturity_level`: pre-1.0 but contract-stabilizing
 
 ## Observed Strengths
 
@@ -11,37 +22,42 @@ Date: 2026-03-17
   scroll behavior.
 - Tooling is lightweight and coherent: TypeScript, ESLint, Prettier, and
   Vitest.
-- Build output and published entrypoints now follow one explicit `dist/`
-  contract, with an automated manifest/build consistency check.
-- The repository now has package-local CI, tagged release automation, and
-  lightweight commit-quality hooks aligned with `koppajs-core`.
+- Build output and published entrypoints follow one explicit `dist/` contract,
+  with automated manifest/build consistency and tarball-consumer verification.
+- The repository has package-local CI, tagged release automation, and a
+  documented meta layer that keeps specs, architecture, and quality rules close
+  to the code.
 
-## Gaps That Were Addressed
+## Alignment Gaps Addressed In This Audit
 
-- The previous meta layer was present but fragmented across a few thin files.
-- There was no explicit decision hierarchy.
-- There was no dedicated AI constitution or repository-wide development rules
-  document.
-- The repository lacked a local ADR system and a formal spec directory.
-- Testing guidance existed, but not as a complete strategy with quality goals,
-  coverage expectations, and mocking policy.
-- Module boundaries were implicit in code rather than documented as architectural
-  intent.
-- The package entrypoint strategy, the broader runtime option surface, and the
-  deliberate absence of Playwright and Stylelint were
-  underdocumented.
-- Release workflow, publish metadata, and Conventional Commit enforcement were
-  missing even though they are useful and proportional for this standalone repo.
+- The spec template did not yet require the canonical evolutionary metadata
+  fields (`evolution_phase`, `completeness_level`, `known_gaps`,
+  `deferred_complexity`, `technical_debt_items`).
+- The runtime used nondeterministic history-state keys even though scroll
+  restoration only requires explicit monotonic identifiers.
+- Unit coverage documented custom event-name and scroll-behavior options in the
+  spec, but did not verify them directly.
+- The README still mixed presentation-heavy copy with one script-ordering
+  mismatch (`check:package` before `build`) instead of presenting the package
+  contract in a calmer, more explicit KoppaJS style.
+
+## Current Alignment Status
+
+- Meta-layer root files are present and internally cross-referenced.
+- `docs/specs/`, `docs/adr/`, `docs/architecture/`, `docs/meta/`, and
+  `docs/quality/` exist and map to the current package scope.
+- The public contract remains small: route definitions, route resolution
+  helpers, DOM sync helpers, and one router runtime class.
+- No package-local UI or application copy has leaked into the runtime.
 
 ## Watchpoints For Future Audits
 
 - `src/index.ts` is still a single file; if it grows, the documented logical
   boundaries should become physical module boundaries.
-- Some public/runtime edge cases are still only partially covered by tests,
-  especially broader click-interception and route-resolution error-path
-  contracts.
+- Delegated-click edge cases are broader in real browsers than in jsdom, so
+  click-interception coverage should expand only when real defects justify it.
 - The GitHub release workflow depends on external secrets and branch discipline;
   that operational contract should be reviewed whenever the release model
   changes.
-- If the package starts supporting more environments or route features, the spec
-  and ADR layers should expand with it.
+- If the package starts supporting more environments or route features, the
+  spec and ADR layers should expand with it.

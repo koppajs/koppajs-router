@@ -435,6 +435,74 @@ describe("koppajs-router", () => {
     expect(window.location.hash).toBe("#contact-form");
   });
 
+  it("applies explicit event, scroll, and active-link options without changing route resolution", async () => {
+    document.body.innerHTML = `
+      <app-shell>
+        <nav>
+          <a data-nav href="/" class="nav-link">Home</a>
+          <a data-nav href="/services" class="nav-link">Services</a>
+        </nav>
+        <main id="outlet"></main>
+      </app-shell>
+    `;
+
+    const outlet = document.querySelector<HTMLElement>("#outlet");
+    expect(outlet).toBeTruthy();
+
+    const scrollState = installScrollState();
+    const defaultEventSpy = vi.fn();
+    const customEventSpy = vi.fn();
+
+    window.addEventListener(KOPPAJS_ROUTE_CHANGE_EVENT, defaultEventSpy);
+    window.addEventListener("router:changed", customEventSpy);
+
+    const router = new KoppajsRouter({
+      routes,
+      outlet: outlet!,
+      root: document,
+      routeChangeEventName: "router:changed",
+      scrollBehavior: "auto",
+      linkSelector: "a[data-nav]",
+      activeClassName: "nav-link--active",
+      activeAttributeName: "data-current",
+    });
+
+    router.init();
+    await flushRouterWork();
+
+    defaultEventSpy.mockClear();
+    customEventSpy.mockClear();
+    scrollState.scrollToSpy.mockClear();
+
+    router.navigate("/services");
+    await flushRouterWork();
+
+    expect(router.resolve("/services").path).toBe("/services");
+    expect(customEventSpy).toHaveBeenCalledTimes(1);
+    expect(defaultEventSpy).not.toHaveBeenCalled();
+    expect(scrollState.scrollToSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        top: 0,
+        behavior: "auto",
+      }),
+    );
+    expect(
+      document
+        .querySelector<HTMLAnchorElement>('a[data-nav][href="/services"]')
+        ?.classList.contains("nav-link--active"),
+    ).toBe(true);
+    expect(
+      document
+        .querySelector<HTMLAnchorElement>('a[data-nav][href="/services"]')
+        ?.getAttribute("data-current"),
+    ).toBe("page");
+    expect(
+      document
+        .querySelector<HTMLAnchorElement>('a[data-nav][href="/"]')
+        ?.classList.contains("nav-link--active"),
+    ).toBe(false);
+  });
+
   it("renders an explicit wildcard route when the current location is unmatched", async () => {
     const routesWithNotFound = [
       ...routes,
@@ -619,6 +687,64 @@ describe("koppajs-router", () => {
     );
     expect(router.getCurrentRoute().path).toBe("/contact");
     expect(router.getCurrentRoute().hash).toBe("#contact-form");
+  });
+
+  it("assigns monotonic history keys across navigation after browser history traversal", async () => {
+    const scrollState = installScrollState();
+
+    document.body.innerHTML = `
+      <app-shell>
+        <main id="outlet"></main>
+      </app-shell>
+    `;
+
+    window.history.replaceState({}, "", "/");
+
+    const outlet = document.querySelector<HTMLElement>("#outlet");
+    expect(outlet).toBeTruthy();
+
+    const router = new KoppajsRouter({
+      routes,
+      outlet: outlet!,
+      root: document,
+    });
+
+    router.init();
+    await flushRouterWork();
+
+    const firstHistoryKey = (window.history.state as { __koppajsRouterKey: number })
+      .__koppajsRouterKey;
+
+    router.navigate("/services", { scroll: false });
+    await flushRouterWork();
+
+    const secondHistoryKey = (window.history.state as { __koppajsRouterKey: number })
+      .__koppajsRouterKey;
+
+    window.history.replaceState({ __koppajsRouterKey: firstHistoryKey }, "", "/");
+    window.dispatchEvent(
+      new PopStateEvent("popstate", {
+        state: { __koppajsRouterKey: firstHistoryKey },
+      }),
+    );
+    await flushRouterWork();
+
+    router.navigate("/contact", { replace: true, scroll: false });
+    await flushRouterWork();
+
+    const thirdHistoryKey = (window.history.state as { __koppajsRouterKey: number })
+      .__koppajsRouterKey;
+
+    expect(Number.isInteger(firstHistoryKey)).toBe(true);
+    expect(firstHistoryKey).toBeGreaterThan(0);
+    expect(secondHistoryKey).toBe(firstHistoryKey + 1);
+    expect(thirdHistoryKey).toBe(secondHistoryKey + 1);
+    expect(scrollState.scrollToSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        top: 0,
+        behavior: "auto",
+      }),
+    );
   });
 
   it("restores scroll restoration and disconnects route-link syncing on destroy", async () => {

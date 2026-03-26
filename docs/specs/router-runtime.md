@@ -1,6 +1,6 @@
 # Router Runtime Specification
 
-## Behavior Overview
+## Description
 
 The package provides a route-config-driven browser router runtime that resolves
 direct paths and named routes, ranks matching routes by specificity, translates
@@ -8,6 +8,21 @@ them across an optional base path, renders the final route's component tag into
 an outlet, updates metadata, emits route-change events, and applies URL-aware
 scroll behavior. The runtime can also be configured for custom browser seams,
 link-matching behavior, event naming, and scroll behavior.
+
+## Evolution
+
+- `evolution_phase`: stabilization
+- `completeness_level`: high
+- `known_gaps`: delegated click-interception coverage is still narrower than a
+  full cross-browser harness, and the runtime remains implemented in one source
+  file even though the logical module boundaries are documented separately.
+- `deferred_complexity`: split `src/index.ts` only when the documented logical
+  boundaries become materially harder to maintain in one file; add package-local
+  browser integration infrastructure only if jsdom stops covering the
+  regression-sensitive contracts.
+- `technical_debt_items`: broaden tests around rarer delegated-navigation
+  branches and maintain the tarball smoke test as the published entrypoint
+  surface grows.
 
 ## Inputs
 
@@ -34,6 +49,25 @@ link-matching behavior, event naming, and scroll behavior.
   events, and scroll behavior
 - publishable ESM build artifacts in `dist/`, with package manifest entrypoints
   expected to resolve to that output
+
+## Behavior
+
+- The runtime compiles the consumer-provided route table into an immutable route
+  registry that supports flat and nested route definitions.
+- Route resolution accepts either a direct path target or a named target,
+  normalizes params/query/hash input, and ranks matches deterministically by
+  specificity.
+- Redirects inherit params, query, and hash unless the redirect target replaces
+  them explicitly, and redirect following stops at the configured depth limit.
+- `init()` seeds an explicit numeric history-state key, attaches delegated click
+  and `popstate` listeners, starts route-link observation, and renders the
+  current location.
+- Successful navigation updates history, outlet markup, document title,
+  description metadata, active-link state, emitted route-change events, and
+  scroll behavior from one resolved route object.
+- `popstate` restores saved scroll positions by history-state key when
+  available and otherwise falls back to anchor scrolling behavior for hashed
+  routes.
 
 ## Constraints
 
@@ -89,6 +123,8 @@ link-matching behavior, event naming, and scroll behavior.
   emitted route-change payload.
 - Custom event-name and scroll-behavior options affect runtime behavior without
   changing route resolution.
+- Custom active-link selector, class, and attribute options affect link syncing
+  without changing route resolution.
 - Excluded links do not receive active-state attributes.
 - Anchor navigation and history traversal produce the documented scroll
   behavior.

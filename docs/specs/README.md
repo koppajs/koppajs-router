@@ -18,12 +18,18 @@ architecture documentation updates.
 
 Each spec should cover:
 
-- behavior overview
+- description
 - inputs
 - outputs
+- behavior
 - constraints
 - edge cases
 - acceptance criteria
+- `evolution_phase`
+- `completeness_level`
+- `known_gaps`
+- `deferred_complexity`
+- `technical_debt_items`
 
 ## Workflow
 

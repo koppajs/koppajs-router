@@ -918,6 +918,8 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
 
   private currentHistoryKey = 0;
 
+  private nextHistoryKey = 1;
+
   private previousScrollRestoration: History["scrollRestoration"] | null = null;
 
   constructor(private readonly options: KoppajsRouterOptions<TRoute>) {
@@ -1019,7 +1021,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
 
     const nextKey = this.getHistoryStateKey(event.state);
     if (nextKey !== null) {
-      this.currentHistoryKey = nextKey;
+      this.registerHistoryKey(nextKey);
     } else {
       this.ensureHistoryState();
     }
@@ -1126,7 +1128,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     const stateKey = this.getHistoryStateKey(this.windowRef.history.state);
 
     if (stateKey !== null) {
-      this.currentHistoryKey = stateKey;
+      this.registerHistoryKey(stateKey);
       return;
     }
 
@@ -1143,7 +1145,14 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
   }
 
   private createHistoryKey(): number {
-    return Date.now() + Math.floor(Math.random() * 1000);
+    const nextKey = this.nextHistoryKey;
+    this.nextHistoryKey += 1;
+    return nextKey;
+  }
+
+  private registerHistoryKey(historyKey: number): void {
+    this.currentHistoryKey = historyKey;
+    this.nextHistoryKey = Math.max(this.nextHistoryKey, historyKey + 1);
   }
 
   private getHistoryStateKey(state: unknown): number | null {

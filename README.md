@@ -1,100 +1,33 @@
-<a id="readme-top"></a>
+# @koppajs/koppajs-router
 
-<div align="center">
-  <img src="https://public-assets-1b57ca06-687a-4142-a525-0635f7649a5c.s3.eu-central-1.amazonaws.com/koppajs/koppajs-logo-text-900x226.png" width="500" alt="KoppaJS Logo">
-</div>
+`@koppajs/koppajs-router` is the KoppaJS browser router runtime. It keeps URL
+resolution, History API navigation, outlet rendering, metadata updates,
+active-link synchronization, and scroll behavior inside one reusable package
+while leaving route content and application logic in the consumer.
 
-<br>
+The published package is ESM-only. Use `import`, not `require()`.
 
-<div align="center">
-  <a href="https://www.npmjs.com/package/@koppajs/koppajs-router"><img src="https://img.shields.io/npm/v/@koppajs/koppajs-router?style=flat-square" alt="npm version"></a>
-  <a href="https://github.com/koppajs/koppajs-router/actions"><img src="https://img.shields.io/github/actions/workflow/status/koppajs/koppajs-router/ci.yml?branch=main&style=flat-square" alt="CI Status"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square" alt="License"></a>
-</div>
+## Purpose
 
-<br>
+The package exists to provide a deterministic, route-config-driven router
+runtime for KoppaJS-style applications.
 
-<div align="center">
-  <h1 align="center">@koppajs/koppajs-router</h1>
-  <h3 align="center">Official browser router runtime for KoppaJS applications</h3>
-  <p align="center">
-    <i>History API routing with explicit contracts, deterministic matching, and no framework lock-in.</i>
-  </p>
-</div>
+It is intentionally narrow:
 
-<br>
+- the package owns path normalization, route matching, redirect following,
+  browser history updates, outlet rendering, metadata updates, active-link
+  state, and scroll restoration
+- the consuming application owns route content, custom element registration,
+  page copy, analytics, and business-specific navigation rules
 
-<div align="center">
-  <p align="center">
-    <a href="https://github.com/koppajs/koppajs-documentation">Documentation</a>
-    &middot;
-    <a href="https://github.com/koppajs/koppajs-core">KoppaJS Core</a>
-    &middot;
-    <a href="https://github.com/koppajs/koppajs-example">Example Project</a>
-    &middot;
-    <a href="https://github.com/koppajs/koppajs-router/issues">Issues</a>
-  </p>
-</div>
+## Repository Classification
 
-<br>
-
-<details>
-<summary>Table of Contents</summary>
-  <ol>
-    <li><a href="#what-is-this-router">What is this router?</a></li>
-    <li><a href="#features">Features</a></li>
-    <li><a href="#installation">Installation</a></li>
-    <li><a href="#requirements">Requirements</a></li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#runtime-behavior">Runtime Behavior</a></li>
-    <li><a href="#router-configuration">Router Configuration</a></li>
-    <li><a href="#route-matching-rules">Route Matching Rules</a></li>
-    <li><a href="#build--distribution">Build & Distribution</a></li>
-    <li><a href="#architecture--governance">Architecture & Governance</a></li>
-    <li><a href="#community--contribution">Community & Contribution</a></li>
-    <li><a href="#license">License</a></li>
-  </ol>
-</details>
-
----
-
-## What is this router?
-
-`@koppajs/koppajs-router` is the official reusable browser router runtime for
-KoppaJS-style applications.
-
-It extracts routing out of the website root and keeps the package boundary
-deliberately narrow:
-
-- the package owns URL normalization, route resolution, History API navigation,
-  outlet rendering, metadata updates, active-link synchronization, and scroll
-  behavior
-- the consuming app still owns the route table content, custom element
-  registration, page copy, and any business-specific navigation rules
-
-The published package is ESM-only. Use standard `import` syntax, not
-`require()`.
-
-`KoppajsRouter` itself is a browser runtime built around the DOM and History
-API. Pure helpers such as `resolveRoute()`, `toHref()`, and
-`fromLocationPathname()` remain usable in non-browser ESM contexts.
-
----
-
-## Features
-
-- base-path-aware href translation and path normalization
-- flat and nested route-record resolution
-- deterministic route matching priority: static segments before dynamic params
-  before `*` catch-all routes
-- named routes, params, redirects, query strings, and hashes
-- History API navigation with explicit unmatched-path handling
-- DOM outlet rendering, document title updates, and meta description updates
-- active route-link synchronization through `data-route` or `href`
-- route-change event emission and scroll restoration behavior
-- browser seams for testing via injectable `document`, `window`, and `root`
-
----
+- `repo_type`: reusable package
+- `runtime_responsibility`: browser router runtime
+- `build_time_responsibility`: TypeScript build, linting, unit tests, tarball
+  smoke testing, and release validation
+- `ui_surface`: none inside the package
+- `maturity_level`: pre-1.0, contract-stabilizing
 
 ## Installation
 
@@ -106,31 +39,70 @@ pnpm add @koppajs/koppajs-router
 npm install @koppajs/koppajs-router
 ```
 
-To use the runtime in an application, make sure:
-
-- your app runs in a browser environment with the DOM and History API
-- the custom elements referenced by `componentTag` are registered by the
-  consumer
-- your route table provides `title`, `description`, and `componentTag` for
-  every final renderable route
-
----
-
-## Requirements
-
-For package consumers:
+Consumer requirements:
 
 - a browser environment with the DOM and History API
-- an ESM-capable build or runtime environment
-- consumer-owned custom element registration for all referenced
-  `componentTag` values
+- an ESM-capable runtime or bundler
+- consumer-owned registration of every referenced `componentTag`
+- `title`, `description`, and `componentTag` on every final renderable route
 
-For local repository work:
+Local repository requirements:
 
 - Node.js >= 20
 - pnpm >= 10.17.1
 
----
+## Public Contract
+
+The public surface is deliberately small.
+
+Main runtime surface:
+
+- `KoppajsRouter`
+- `RouteDefinition`, `ResolvedRoute`, `RedirectedRoute`, and related route
+  types
+- `normalizePath()`, `normalizeHash()`, `normalizeBasePath()`
+- `toHref()` and `fromLocationPathname()`
+- `resolveRoute()` and `resolveRouteByName()`
+- `setActiveRouteLinks()` and `setDocumentDescription()`
+- `DEFAULT_ROUTE_LINK_SELECTOR`
+- `DEFAULT_ROUTE_CHANGE_EVENT_NAME`
+- `KOPPAJS_ROUTE_CHANGE_EVENT`
+
+Runtime instance helpers:
+
+- `router.resolve()` / `router.resolveByName()`
+- `router.navigate()` / `router.navigateByName()`
+- `router.hrefFor()`
+- `router.getCurrentPath()` / `router.getCurrentRoute()`
+
+Contract constraints:
+
+- flat and nested route definitions are both supported
+- route names must be unique
+- unmatched paths throw unless the consumer declares an explicit `path: "*"`
+  route
+- static segments outrank dynamic segments, and dynamic segments outrank `*`
+- active-link matching is path-based and ignores query and hash state
+- route records are treated as immutable input data
+
+## Ownership Boundaries
+
+Package-owned concerns:
+
+- route registry compilation and matching
+- named-route resolution and param interpolation
+- base-path translation between app paths and browser hrefs
+- redirect following with bounded depth
+- outlet rendering, title updates, description updates, and route-change events
+- active-link synchronization and scroll handling
+
+Consumer-owned concerns:
+
+- route definitions and route metadata
+- custom element implementations referenced by `componentTag`
+- application copy and page composition
+- analytics, business rules, and link exclusion policy
+- browser-level end-to-end coverage in real application shells
 
 ## Usage
 
@@ -210,93 +182,66 @@ router.navigate({
 });
 ```
 
-Public API highlights:
-
-- `KoppajsRouter`: class-based router runtime
-- `normalizePath()`, `normalizeHash()`, `normalizeBasePath()`
-- `toHref()` and `fromLocationPathname()`
-- `resolveRoute()` and `resolveRouteByName()`
-- `router.resolve()` / `router.resolveByName()`
-- `router.navigate()` / `router.navigateByName()`
-- `router.hrefFor()`
-- `router.getCurrentPath()` / `router.getCurrentRoute()`
-- `setActiveRouteLinks()` and `setDocumentDescription()`
-- `DEFAULT_ROUTE_LINK_SELECTOR`
-- `DEFAULT_ROUTE_CHANGE_EVENT_NAME`
-- `KOPPAJS_ROUTE_CHANGE_EVENT`
-
----
-
 ## Runtime Behavior
 
-At startup:
+Startup flow:
 
-- the router builds a route registry from the provided route definitions
-- `init()` attaches delegated navigation and `popstate` listeners
+- the router builds a route registry from the supplied route definitions
+- `init()` seeds a router-specific history-state key, attaches delegated click
+  and `popstate` listeners, and starts route-link observation
 - the current browser location is resolved and rendered into the outlet
 
-On navigation:
+Navigation flow:
 
 - a direct path or named target is resolved into a normalized `ResolvedRoute`
 - the browser URL is translated through the configured `basePath`
-- history state, outlet content, document metadata, active links, and the
-  route-change event are updated together
+- history state, outlet content, metadata, active links, and the route-change
+  event are updated together
 - scroll behavior is applied after render, including anchor navigation and
   saved-history restoration
 
-Important constraints:
+## Runtime Options
 
-- unmatched paths do not silently fall back to the first route
-- redirect resolution is bounded to prevent loops
-- final rendered routes must provide `title`, `description`, and
-  `componentTag`
+Browser seam options:
 
----
+- `root`, `document`, `window`
 
-## Router Configuration
+Routing and URL options:
 
-Runtime configuration highlights:
+- `basePath`
+- `routeChangeEventName`
+- `scrollBehavior`
 
-- `basePath`: translate app paths beneath a subpath deployment such as
-  `/preview/`
-- `root`, `document`, `window`: inject browser seams for testing or custom host
-  environments
-- `routeChangeEventName`: override the emitted browser event name
-- `scrollBehavior`: control default forward-navigation scroll behavior
-- `linkSelector`, `activeClassName`, `activeAttributeName`,
-  `shouldSetActiveState`: customize active-link synchronization
+Active-link options:
 
-Consumer-side expectations:
+- `linkSelector`
+- `activeClassName`
+- `activeAttributeName`
+- `shouldSetActiveState`
 
-- declare a `path: "*"` route if unmatched paths should render a not-found page
-- keep route names unique when using named navigation
-- use `data-route` on links when you want delegated navigation and active-state
-  handling without relying on plain `href`
+Important nuance:
 
----
+- the default delegated-link selector is `a[data-route]`
+- active-link and click handling derive the route target from `data-route` when
+  present and otherwise fall back to `href`
+- if you want href-only links to participate in delegated handling, provide a
+  selector such as `a[data-nav]` or `a[href^="/"]` explicitly
 
 ## Route Matching Rules
 
-- static path segments win over dynamic `:param` segments, even if the dynamic
-  route appears earlier in the route table
+- static path segments win over dynamic `:param` segments, even if declared
+  later
 - dynamic `:param` segments win over `*` catch-all routes
-- unmatched paths throw a clear error unless a matching `path: "*"` route is
-  present
-- catch-all routes preserve the unmatched browser path in the resolved route's
-  `path` and `fullPath`
-- active links are matched by normalized route path only, not by query or hash
+- catch-all routes preserve the unmatched browser path in `path` and `fullPath`
+- unmatched paths never fall back to the first route silently
+- redirects inherit params, query, and hash unless the redirect target replaces
+  them
 
----
+## Build And Distribution
 
-## Build & Distribution
-
-- source code lives in `src/`
-- `pnpm run build` emits the publishable library to `dist/`
+- source lives in `src/`
+- `pnpm run build` emits the publishable package to `dist/`
 - the package manifest exports `dist/index.js` and `dist/index.d.ts`
-- the published package is ESM-only and is intended to be consumed through
-  `import`
-- when consuming this repository directly instead of a published package, build
-  first so `dist/` exists
 - `pnpm run check:package` verifies that manifest entrypoints and build output
   stay aligned
 - `pnpm run test:package` packs the tarball, installs it into a clean temporary
@@ -310,46 +255,62 @@ pnpm run typecheck
 pnpm run lint
 pnpm run test:unit
 pnpm run test:ci
-pnpm run check:package
 pnpm run build
+pnpm run check:package
 pnpm run test:package
 pnpm run check
 ```
 
----
+## Ecosystem Fit
 
-## Architecture & Governance
+This package is the routing runtime layer in the KoppaJS ecosystem.
 
-This package keeps its architecture memory and governance in the repository.
+- `koppajs-core` and application shells can depend on it without inheriting
+  website-specific route content
+- consumer applications keep ownership of route tables, component registration,
+  and integration-level browser behavior
+- this repository intentionally does not include a demo app, Playwright suite,
+  or UI surface of its own
 
-Start here:
+## Governance
 
-- `META_LAYER.md` for the index
-- `DECISION_HIERARCHY.md` for precedence rules
-- `AI_CONSTITUTION.md` for collaboration and AI workflow rules
-- `ARCHITECTURE.md` plus `docs/architecture/` for system structure
-- `DEVELOPMENT_RULES.md` for implementation constraints
-- `TESTING_STRATEGY.md` plus `docs/quality/` for verification policy
-- `RELEASE.md` for the tag-driven release workflow
-- `docs/specs/` for behavior specs
-- `docs/adr/` for architecture decision records
+The repository keeps its design memory next to the code.
 
----
+Read in this order:
 
-## Community & Contribution
+1. `DECISION_HIERARCHY.md`
+2. relevant spec in `docs/specs/`
+3. `AI_CONSTITUTION.md`
+4. `ARCHITECTURE.md`
+5. `DEVELOPMENT_RULES.md`
+6. `TESTING_STRATEGY.md`
+7. `README.md`
 
-Issues and pull requests are welcome:
+Supporting governance and architecture files:
 
-https://github.com/koppajs/koppajs-router/issues
+- `META_LAYER.md`
+- `DECISIONS.md`
+- `docs/adr/`
+- `docs/architecture/`
+- `docs/meta/`
+- `docs/quality/`
+- `RELEASE.md`
+- `CONTRIBUTING.md`
+- `ROADMAP.md`
 
-Please keep contributions focused on:
+## Contribution Focus
 
-- stable public routing behavior
-- preserving the documented base-path and active-link contracts
-- keeping the runtime generic and free of application-specific page logic
+Contributions should preserve:
 
----
+- base-path behavior
+- active-link semantics
+- explicit unmatched-path handling
+- generic package boundaries with no application-specific page logic
+
+Issues and pull requests:
+
+- <https://github.com/koppajs/koppajs-router/issues>
 
 ## License
 
-Apache-2.0 - Copyright 2026 KoppaJS, Bastian Bensch
+Apache-2.0. Copyright 2026 KoppaJS, Bastian Bensch.
