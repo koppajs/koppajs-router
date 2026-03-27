@@ -12,6 +12,17 @@ not every internal refactor.
 
 ## [Unreleased]
 
+This section is intentionally empty.
+Changes will only appear here when they:
+
+- affect repository behavior or public guidance,
+- change contributor workflow or governance,
+- or alter the documented package or repository contract.
+
+---
+
+## 0.1.2
+
 - raise the repository Node.js baseline to `>= 22`, add an explicit `validate`
   gate for CI and release, and expand compatibility validation to Node 22 and
   24

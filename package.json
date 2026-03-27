@@ -1,6 +1,6 @@
 {
   "name": "@koppajs/koppajs-router",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Reusable History API router primitives for KoppaJS applications.",
   "author": "Bastian Bensch",
   "license": "Apache-2.0",
