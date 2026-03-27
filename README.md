@@ -1,11 +1,66 @@
-# @koppajs/koppajs-router
+<a id="readme-top"></a>
 
-`@koppajs/koppajs-router` is the KoppaJS browser router runtime. It keeps URL
-resolution, History API navigation, outlet rendering, metadata updates,
-active-link synchronization, and scroll behavior inside one reusable package
-while leaving route content and application logic in the consumer.
+<div align="center">
+  <img src="https://public-assets-1b57ca06-687a-4142-a525-0635f7649a5c.s3.eu-central-1.amazonaws.com/koppajs/koppajs-logo-text-900x226.png" width="500" alt="KoppaJS Logo">
+</div>
 
-The published package is ESM-only. Use `import`, not `require()`.
+<br>
+
+<div align="center">
+  <a href="https://www.npmjs.com/package/@koppajs/koppajs-router"><img src="https://img.shields.io/npm/v/@koppajs/koppajs-router?style=flat-square" alt="npm version"></a>
+  <a href="https://github.com/koppajs/koppajs-router/actions"><img src="https://img.shields.io/github/actions/workflow/status/koppajs/koppajs-router/ci.yml?branch=main&style=flat-square" alt="CI Status"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square" alt="License"></a>
+</div>
+
+<br>
+
+<div align="center">
+  <h1 align="center">@koppajs/koppajs-router</h1>
+  <h3 align="center">Official browser router runtime for KoppaJS applications</h3>
+  <p align="center">
+    <i>History API routing with explicit contracts, deterministic matching, and no framework lock-in.</i>
+  </p>
+</div>
+
+<br>
+
+<div align="center">
+  <p align="center">
+    <a href="https://github.com/koppajs/koppajs-documentation">Documentation</a>
+    &middot;
+    <a href="https://github.com/koppajs/koppajs-core">KoppaJS Core</a>
+    &middot;
+    <a href="https://github.com/koppajs/create-koppajs">create-koppajs</a>
+    &middot;
+    <a href="https://github.com/koppajs/koppajs-vite-plugin">Vite Plugin</a>
+    &middot;
+    <a href="https://github.com/koppajs/koppajs-router/issues">Issues</a>
+  </p>
+</div>
+
+<br>
+
+<details>
+<summary>Table of Contents</summary>
+  <ol>
+    <li><a href="#purpose">Purpose</a></li>
+    <li><a href="#repository-classification">Repository Classification</a></li>
+    <li><a href="#installation">Installation</a></li>
+    <li><a href="#public-contract">Public Contract</a></li>
+    <li><a href="#ownership-boundaries">Ownership Boundaries</a></li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#runtime-behavior">Runtime Behavior</a></li>
+    <li><a href="#runtime-options">Runtime Options</a></li>
+    <li><a href="#route-matching-rules">Route Matching Rules</a></li>
+    <li><a href="#build-and-distribution">Build And Distribution</a></li>
+    <li><a href="#ecosystem-fit">Ecosystem Fit</a></li>
+    <li><a href="#architecture-governance">Architecture & Governance</a></li>
+    <li><a href="#community-contribution">Community & Contribution</a></li>
+    <li><a href="#license">License</a></li>
+  </ol>
+</details>
+
+---
 
 ## Purpose
 
@@ -20,6 +75,8 @@ It is intentionally narrow:
 - the consuming application owns route content, custom element registration,
   page copy, analytics, and business-specific navigation rules
 
+---
+
 ## Repository Classification
 
 - `repo_type`: reusable package
@@ -28,6 +85,8 @@ It is intentionally narrow:
   smoke testing, and release validation
 - `ui_surface`: none inside the package
 - `maturity_level`: pre-1.0, contract-stabilizing
+
+---
 
 ## Installation
 
@@ -50,6 +109,8 @@ Local repository requirements:
 
 - Node.js >= 20
 - pnpm >= 10.17.1
+
+---
 
 ## Public Contract
 
@@ -85,6 +146,8 @@ Contract constraints:
 - active-link matching is path-based and ignores query and hash state
 - route records are treated as immutable input data
 
+---
+
 ## Ownership Boundaries
 
 Package-owned concerns:
@@ -103,6 +166,8 @@ Consumer-owned concerns:
 - application copy and page composition
 - analytics, business rules, and link exclusion policy
 - browser-level end-to-end coverage in real application shells
+
+---
 
 ## Usage
 
@@ -182,6 +247,8 @@ router.navigate({
 });
 ```
 
+---
+
 ## Runtime Behavior
 
 Startup flow:
@@ -199,6 +266,8 @@ Navigation flow:
   event are updated together
 - scroll behavior is applied after render, including anchor navigation and
   saved-history restoration
+
+---
 
 ## Runtime Options
 
@@ -227,6 +296,8 @@ Important nuance:
 - if you want href-only links to participate in delegated handling, provide a
   selector such as `a[data-nav]` or `a[href^="/"]` explicitly
 
+---
+
 ## Route Matching Rules
 
 - static path segments win over dynamic `:param` segments, even if declared
@@ -236,6 +307,8 @@ Important nuance:
 - unmatched paths never fall back to the first route silently
 - redirects inherit params, query, and hash unless the redirect target replaces
   them
+
+---
 
 ## Build And Distribution
 
@@ -261,6 +334,8 @@ pnpm run test:package
 pnpm run check
 ```
 
+---
+
 ## Ecosystem Fit
 
 This package is the routing runtime layer in the KoppaJS ecosystem.
@@ -272,45 +347,49 @@ This package is the routing runtime layer in the KoppaJS ecosystem.
 - this repository intentionally does not include a demo app, Playwright suite,
   or UI surface of its own
 
-## Governance
+---
 
-The repository keeps its design memory next to the code.
+## Architecture & Governance
 
-Read in this order:
+Project intent, contributor rules, and documentation contracts live in the local repo meta layer:
 
-1. `DECISION_HIERARCHY.md`
-2. relevant spec in `docs/specs/`
-3. `AI_CONSTITUTION.md`
-4. `ARCHITECTURE.md`
-5. `DEVELOPMENT_RULES.md`
-6. `TESTING_STRATEGY.md`
-7. `README.md`
+- [AI_CONSTITUTION.md](./AI_CONSTITUTION.md)
+- [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [DECISION_HIERARCHY.md](./DECISION_HIERARCHY.md)
+- [DEVELOPMENT_RULES.md](./DEVELOPMENT_RULES.md)
+- [TESTING_STRATEGY.md](./TESTING_STRATEGY.md)
+- [RELEASE.md](./RELEASE.md)
+- [ROADMAP.md](./ROADMAP.md)
+- [CHANGELOG.md](./CHANGELOG.md)
+- [CONTRIBUTING.md](./CONTRIBUTING.md)
+- [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+- [docs/specs/README.md](./docs/specs/README.md)
+- [docs/specs/repository-documentation-contract.md](./docs/specs/repository-documentation-contract.md)
+- [docs/meta/README.md](./docs/meta/README.md)
+- [docs/quality/README.md](./docs/quality/README.md)
 
-Supporting governance and architecture files:
+The file-shape contract for `README.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, and `CONTRIBUTING.md` is defined in [docs/specs/repository-documentation-contract.md](./docs/specs/repository-documentation-contract.md).
 
-- `META_LAYER.md`
-- `DECISIONS.md`
-- `docs/adr/`
-- `docs/architecture/`
-- `docs/meta/`
-- `docs/quality/`
-- `RELEASE.md`
-- `CONTRIBUTING.md`
-- `ROADMAP.md`
+Run the local document guard before committing:
 
-## Contribution Focus
+```bash
+pnpm run check:docs
+```
 
-Contributions should preserve:
+---
 
-- base-path behavior
-- active-link semantics
-- explicit unmatched-path handling
-- generic package boundaries with no application-specific page logic
+## Community & Contribution
 
-Issues and pull requests:
+Issues and pull requests are welcome:
 
-- <https://github.com/koppajs/koppajs-router/issues>
+https://github.com/koppajs/koppajs-router/issues
+
+Contributor workflow details live in [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+Community expectations live in [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
+
+---
 
 ## License
 
-Apache-2.0. Copyright 2026 KoppaJS, Bastian Bensch.
+Apache License 2.0 — © 2026 KoppaJS, Bastian Bensch

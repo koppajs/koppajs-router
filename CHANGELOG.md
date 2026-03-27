@@ -1,8 +1,31 @@
-# Changelog
+# Change Log
 
-All notable changes to `@koppajs/koppajs-router` will be tracked here.
+All notable changes to **@koppajs/koppajs-router** are documented in this file.
 
-## Unreleased
+This project uses a **manual, tag-driven release process**.
+Only tagged versions represent official releases.
+
+This changelog documents **intentional milestones and guarantees**,
+not every internal refactor.
+
+---
+
+## [Unreleased]
+
+This section is intentionally empty.
+Changes will only appear here when they:
+
+- affect repository behavior or public guidance,
+- change contributor workflow or governance,
+- or alter the documented package or repository contract.
+
+---
+
+## 0.1.1
+
+- add a repository documentation contract spec with local validator enforcement
+- align `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, and `CODE_OF_CONDUCT.md` with the governed KoppaJS root-document format
+- wire `pnpm run check:docs` into the repository quality gate and the local pre-commit hook
 
 ## 0.1.0
 
