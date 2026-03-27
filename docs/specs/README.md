@@ -1,39 +1,26 @@
 # Specifications
 
-Specs define observable behavior before or alongside implementation.
+Specs define intended behavior before or alongside implementation work.
+They are the highest-precedence behavioral documents in this repository once approved.
 
-## When A Spec Is Required
+## When To Add Or Update A Spec
 
-Create or update a spec when a change affects:
+- A public behavior changes
+- A contributor-facing workflow changes
+- A governed root document changes shape
+- A new subsystem takes on externally visible behavior
 
-- public API behavior
-- routing semantics
-- rendering or navigation lifecycle
-- consumer-visible constraints or error handling
+## Required Sections
 
-Small internal refactors that do not change behavior may only need tests and
-architecture documentation updates.
-
-## Spec Template
-
-Each spec should cover:
-
-- description
-- inputs
-- outputs
+- scope
 - behavior
 - constraints
 - edge cases
-- acceptance criteria
-- `evolution_phase`
-- `completeness_level`
-- `known_gaps`
-- `deferred_complexity`
-- `technical_debt_items`
+- validation or acceptance criteria
 
-## Workflow
+Use the local spec template when one exists.
 
-- Start with a spec for substantial changes.
-- Keep specs implementation-aware enough to be useful, but behavior-focused
-  enough to survive refactors.
-- Update or supersede specs when the behavior changes.
+## Current Specs
+
+- `repository-documentation-contract.md`
+- `router-runtime.md`
