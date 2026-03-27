@@ -69,7 +69,7 @@ The local pre-commit hook runs the same guard and blocks the commit when the con
 
 ## Requirements
 
-- Node.js >= 20
+- Node.js >= 22
 - pnpm >= 10.17.1
 
 Install dependencies:
@@ -155,6 +155,7 @@ That means:
 | ----------------------- | ------------------------------------------------------------------------------------- |
 | `pnpm run check:docs`   | Validate README, CHANGELOG, CODE_OF_CONDUCT, CONTRIBUTING, and the local doc contract |
 | `pnpm run check`        | Run the main local quality gate                                                       |
+| `pnpm run validate`     | Run the CI and release validation gate                                                |
 | `pnpm run build`        | Build the project output                                                              |
 | `pnpm run test`         | Run the test suite                                                                    |
 | `pnpm run lint`         | Run lint checks                                                                       |

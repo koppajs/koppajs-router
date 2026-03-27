@@ -21,6 +21,14 @@ Changes will only appear here when they:
 
 ---
 
+## 0.1.2
+
+- raise the repository Node.js baseline to `>= 22`, add an explicit `validate`
+  gate for CI and release, and expand compatibility validation to Node 22 and
+  24
+
+---
+
 ## 0.1.1
 
 - add a repository documentation contract spec with local validator enforcement

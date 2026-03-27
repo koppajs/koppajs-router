@@ -25,6 +25,7 @@ The release is controlled by:
 
 - the version in `package.json`
 - the release entry in `CHANGELOG.md`
+- the maintainer default in `.nvmrc`
 - the merge of the release-ready state into `main`
 - the Git tag in the form `vX.Y.Z`
 - the GitHub Actions workflow in `.github/workflows/release.yml`
@@ -35,6 +36,7 @@ Important consequences:
 - A tag alone triggers the release workflow.
 - The tag version must exactly match `package.json`.
 - The tag must point to the release commit on `main`.
+- The publish job uses the maintainer-default Node.js version from `.nvmrc`.
 - After a successful release, `main` should be merged back into `develop`.
 
 Do not tag `develop`.
@@ -55,7 +57,7 @@ Before cutting a release, ensure all of the following are true:
 
 Tooling expectations for local verification:
 
-- Node.js 20 or newer
+- Node.js 22 or newer
 - pnpm 10.17.1 or newer
 
 This repository enforces `engine-strict=true` in `.npmrc`, so incompatible
@@ -96,20 +98,19 @@ Recommended commands:
 
 ```bash
 pnpm install
-pnpm run build
-pnpm run test:package
-pnpm run check
+pnpm run validate
 ```
 
 Why this matters:
 
-- the release workflow will run the same quality gates again in CI
+- the release workflow first runs the same validation contract on Node 22 and 24
+- the publish job reruns that validation on the maintainer default from `.nvmrc`
 - failing locally is cheaper than failing after tagging
-- `pnpm run build` verifies the publishable package output
-- `pnpm run check:package` verifies that manifest entrypoints and build output
-  stay aligned
-- `pnpm run test:package` verifies that the packed ESM tarball installs and
-  imports in a clean temporary consumer
+- `pnpm run validate` includes the publishable build output check
+- `pnpm run validate` verifies that manifest entrypoints and build output stay
+  aligned
+- `pnpm run validate` verifies that the packed ESM tarball installs and imports
+  in a clean temporary consumer
 
 The published package contents are controlled by the `files` field in
 `package.json`. At the moment, the publish payload is intentionally limited to:

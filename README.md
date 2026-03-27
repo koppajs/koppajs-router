@@ -107,7 +107,7 @@ Consumer requirements:
 
 Local repository requirements:
 
-- Node.js >= 20
+- Node.js >= 22
 - pnpm >= 10.17.1
 
 ---
@@ -319,19 +319,16 @@ Important nuance:
   stay aligned
 - `pnpm run test:package` packs the tarball, installs it into a clean temporary
   consumer, and imports the published entrypoint
+- `pnpm run check` is the main local quality gate
+- `pnpm run validate` is the CI and release validation contract; it runs
+  `check` plus the tarball-consumer smoke test
 
 Local verification commands:
 
 ```bash
 pnpm install
-pnpm run typecheck
-pnpm run lint
-pnpm run test:unit
-pnpm run test:ci
-pnpm run build
-pnpm run check:package
-pnpm run test:package
 pnpm run check
+pnpm run validate
 ```
 
 ---
