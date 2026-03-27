@@ -72,9 +72,11 @@ Run these checks before considering work complete:
 - `pnpm run check:package`
 - `pnpm run test:package`
 - `pnpm run check`
+- `pnpm run validate`
 
 ## CI And Release Validation
 
-- `.github/workflows/ci.yml` runs the package quality gate on Node 20 and 22.
-- `.github/workflows/release.yml` reruns the same checks, including the packed
-  tarball consumer smoke test, before publishing a tagged release to npm.
+- `.github/workflows/ci.yml` runs `pnpm run validate` on Node 22 and 24.
+- `.github/workflows/release.yml` first validates `pnpm run validate` on Node
+  22 and 24, then reruns the same validation on the maintainer default from
+  `.nvmrc` before publishing a tagged release to npm.

@@ -4,11 +4,14 @@ This directory captures the repository's practical quality gates.
 
 ## Verification Matrix
 
-- Script-based checks remain the authoritative local quality gate.
-- `.github/workflows/ci.yml` mirrors that quality gate on GitHub Actions for
-  Node 20 and 22.
-- `.github/workflows/release.yml` reruns the release-critical checks before npm
-  publish.
+- `pnpm run check` is the main local quality gate.
+- `pnpm run validate` is the CI and release validation contract; it reruns
+  `check` and then verifies the packed tarball in a clean consumer.
+- `.github/workflows/ci.yml` runs `pnpm run validate` on GitHub Actions for
+  Node 22 and 24.
+- `.github/workflows/release.yml` first validates `pnpm run validate` on Node
+  22 and 24, then reruns the same validation on the maintainer default from
+  `.nvmrc` before npm publish.
 - Lint and formatting:
   `pnpm run lint`
 - Unit and jsdom lifecycle tests:
@@ -23,6 +26,8 @@ This directory captures the repository's practical quality gates.
   `pnpm run test:package`
 - Full package gate:
   `pnpm run check`
+- CI/release validation gate:
+  `pnpm run validate`
 
 ## Tooling Decisions
 

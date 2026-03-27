@@ -1,6 +1,6 @@
 # Repository Audit Snapshot
 
-Date: 2026-03-26
+Date: 2026-03-27
 
 ## Repository Classification
 
@@ -40,6 +40,9 @@ Date: 2026-03-26
 - The README still mixed presentation-heavy copy with one script-ordering
   mismatch (`check:package` before `build`) instead of presenting the package
   contract in a calmer, more explicit KoppaJS style.
+- CI and release validation previously relied on `check` plus workflow-local
+  steps instead of one explicit `validate` contract, and the publish job
+  hard-coded its Node.js version instead of reading `.nvmrc`.
 
 ## Current Alignment Status
 
@@ -49,6 +52,9 @@ Date: 2026-03-26
 - The public contract remains small: route definitions, route resolution
   helpers, DOM sync helpers, and one router runtime class.
 - No package-local UI or application copy has leaked into the runtime.
+- CI now validates the package contract on Node 22 and 24 through one explicit
+  `validate` script, and the release publish job resolves its Node.js version
+  from `.nvmrc`.
 
 ## Watchpoints For Future Audits
 

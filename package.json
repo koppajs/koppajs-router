@@ -29,7 +29,7 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=20",
+    "node": ">=22",
     "pnpm": ">=10.17.1"
   },
   "exports": {
@@ -57,7 +57,8 @@
     "test:ci": "pnpm run test:unit",
     "test:package": "node ./scripts/test-package-consumer.mjs",
     "test": "pnpm run typecheck && pnpm run test:unit",
-    "check": "pnpm run check:docs && pnpm run lint && pnpm run test && pnpm run build && pnpm run check:package && pnpm run test:package",
+    "check": "pnpm run check:docs && pnpm run lint && pnpm run test && pnpm run build && pnpm run check:package",
+    "validate": "pnpm run check && pnpm run test:package",
     "check:docs": "node scripts/check-doc-contract.mjs"
   },
   "devDependencies": {
