@@ -636,7 +636,7 @@ describe("koppajs-router", () => {
     ).toBe("page");
   });
 
-  it("handles anchor navigation on load and restores saved scroll on browser history traversal", async () => {
+  it("handles anchor navigation on load and restores saved scroll instantly on browser history traversal", async () => {
     const scrollState = installScrollState();
 
     if (!("scrollIntoView" in HTMLElement.prototype)) {
@@ -718,14 +718,14 @@ describe("koppajs-router", () => {
     expect(scrollState.scrollToSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         top: 240,
-        behavior: "auto",
+        behavior: "instant",
       }),
     );
     expect(router.getCurrentRoute().path).toBe("/contact");
     expect(router.getCurrentRoute().hash).toBe("#contact-form");
   });
 
-  it("restores scroll on real browser back and forward traversal", async () => {
+  it("restores scroll instantly on real browser back and forward traversal", async () => {
     const scrollState = installScrollState();
 
     document.body.innerHTML = `
@@ -754,20 +754,34 @@ describe("koppajs-router", () => {
     await flushRouterWork();
 
     scrollState.setScroll(800);
+    scrollState.scrollToSpy.mockClear();
     window.history.back();
     await flushHistoryTraversal();
 
     expect(window.location.pathname).toBe("/");
     expect(scrollState.getScroll().top).toBe(1200);
+    expect(scrollState.scrollToSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        top: 1200,
+        behavior: "instant",
+      }),
+    );
 
+    scrollState.scrollToSpy.mockClear();
     window.history.forward();
     await flushHistoryTraversal();
 
     expect(window.location.pathname).toBe("/services");
     expect(scrollState.getScroll().top).toBe(800);
+    expect(scrollState.scrollToSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        top: 800,
+        behavior: "instant",
+      }),
+    );
   });
 
-  it("restores persisted target-state scroll when the runtime map is empty", async () => {
+  it("restores persisted target-state scroll instantly when the runtime map is empty", async () => {
     const scrollState = installScrollState();
 
     document.body.innerHTML = `
@@ -816,13 +830,13 @@ describe("koppajs-router", () => {
       expect.objectContaining({
         left: 16,
         top: 640,
-        behavior: "auto",
+        behavior: "instant",
       }),
     );
     expect(router.getCurrentRoute().path).toBe("/contact");
   });
 
-  it("restores persisted scroll on router startup after a reload", async () => {
+  it("restores persisted scroll instantly on router startup after a reload", async () => {
     const scrollState = installScrollState();
 
     document.body.innerHTML = `
@@ -863,7 +877,7 @@ describe("koppajs-router", () => {
       expect.objectContaining({
         left: 4,
         top: 880,
-        behavior: "auto",
+        behavior: "instant",
       }),
     );
     expect(router.getCurrentRoute().path).toBe("/services");
@@ -1052,7 +1066,7 @@ describe("koppajs-router", () => {
     expect(scrollState.scrollToSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         top: 0,
-        behavior: "auto",
+        behavior: "instant",
       }),
     );
   });

@@ -874,6 +874,15 @@ const getScrollPosition = (windowRef: Window): ScrollPosition => ({
   top: windowRef.scrollY,
 });
 
+const restoreScrollPosition = (windowRef: Window, position: ScrollPosition): void => {
+  // History restores must bypass document-level CSS smooth scrolling.
+  windowRef.scrollTo({
+    left: position.left,
+    top: position.top,
+    behavior: "instant",
+  });
+};
+
 const getAnchorElement = (documentRef: Document, hash: string): HTMLElement | null => {
   if (hash === "") {
     return null;
@@ -1340,11 +1349,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
       const savedPosition = this.getSavedScrollPosition(this.windowRef.history.state);
 
       if (savedPosition) {
-        this.windowRef.scrollTo({
-          left: savedPosition.left,
-          top: savedPosition.top,
-          behavior: "auto",
-        });
+        restoreScrollPosition(this.windowRef, savedPosition);
         return;
       }
 
@@ -1360,11 +1365,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
       this.pendingPopState = null;
 
       if (savedPosition) {
-        this.windowRef.scrollTo({
-          left: savedPosition.left,
-          top: savedPosition.top,
-          behavior: "auto",
-        });
+        restoreScrollPosition(this.windowRef, savedPosition);
         return;
       }
 

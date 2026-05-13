@@ -59,6 +59,9 @@ Tooling expectations for local verification:
 
 - Node.js 22 or newer
 - pnpm 10.17.1 or newer
+- CI and release workflows activate the `packageManager` pnpm version through
+  Node.js Corepack after `actions/setup-node` has selected the job's Node.js
+  version.
 
 This repository enforces `engine-strict=true` in `.npmrc`, so incompatible
 Node.js or pnpm versions should be treated as a release blocker.

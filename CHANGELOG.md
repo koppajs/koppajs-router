@@ -21,6 +21,13 @@ Changes will only appear here when they:
 
 ---
 
+## 0.1.4
+
+- restore persisted history scroll positions instantly so global CSS smooth
+  scrolling cannot delay browser back/forward or reload scroll restoration
+
+---
+
 ## 0.1.3
 
 - persist router scroll positions on browser history entries so back/forward
