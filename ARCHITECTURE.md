@@ -78,16 +78,20 @@ At startup:
    optional browser dependencies.
 2. The router builds a route registry once from the provided route definitions.
 3. `init()` attaches `popstate` and delegated click listeners, starts a
-   mutation observer for late-rendered route links, ensures a router-specific
-   history key, switches history scroll restoration to manual, and renders the
-   current location.
+   mutation observer for late-rendered route links, attaches lifecycle scroll
+   persistence listeners, ensures a router-specific history key, switches
+   history scroll restoration to manual, and renders the current location.
+4. If the current history entry already contains a persisted scroll position,
+   the router restores it after render; otherwise hashed startup routes use the
+   anchor fallback.
 
 On navigation:
 
 1. The router resolves either a direct path or named route target into a
    `ResolvedRoute`.
 2. The resolved route is converted into a base-path-aware browser href.
-3. History state is pushed or replaced with a fresh router key.
+3. The current entry's scroll position is saved, then history state is pushed
+   or replaced with a fresh router key and no inherited scroll snapshot.
 4. The outlet is re-rendered with the route's `componentTag`.
 5. Document title, description, active links, and the route-change event are
    updated.
@@ -99,7 +103,8 @@ On browser history traversal:
 1. The router snapshots the old scroll position.
 2. The incoming history key is read from `event.state`.
 3. The current location is resolved again from `window.location`.
-4. Saved scroll is restored when available; otherwise the hash anchor is used.
+4. Saved scroll is restored from memory or the target entry's persisted
+   history state when available; otherwise the hash anchor is used.
 
 On teardown:
 

@@ -254,18 +254,21 @@ router.navigate({
 Startup flow:
 
 - the router builds a route registry from the supplied route definitions
-- `init()` seeds a router-specific history-state key, attaches delegated click
-  and `popstate` listeners, and starts route-link observation
+- `init()` seeds a router-specific history-state key, attaches delegated click,
+  `popstate`, and `pagehide` listeners, and starts route-link observation
 - the current browser location is resolved and rendered into the outlet
+- if the current history entry has a persisted scroll position, it is restored
+  after render
 
 Navigation flow:
 
 - a direct path or named target is resolved into a normalized `ResolvedRoute`
 - the browser URL is translated through the configured `basePath`
-- history state, outlet content, metadata, active links, and the route-change
-  event are updated together
+- the current entry's scroll position is saved, then history state, outlet
+  content, metadata, active links, and the route-change event are updated
+  together
 - scroll behavior is applied after render, including anchor navigation and
-  saved-history restoration
+  saved-history restoration from memory or persisted history state
 
 ---
 
