@@ -59,15 +59,22 @@ link-matching behavior, event naming, and scroll behavior.
   specificity.
 - Redirects inherit params, query, and hash unless the redirect target replaces
   them explicitly, and redirect following stops at the configured depth limit.
-- `init()` seeds an explicit numeric history-state key, attaches delegated click
-  and `popstate` listeners, starts route-link observation, and renders the
-  current location.
+- `init()` seeds an explicit numeric history-state key, attaches delegated
+  click, `popstate`, and `pagehide` listeners, starts route-link observation,
+  switches history scroll restoration to manual, and renders the current
+  location.
 - Successful navigation updates history, outlet markup, document title,
   description metadata, active-link state, emitted route-change events, and
   scroll behavior from one resolved route object.
-- `popstate` restores saved scroll positions by history-state key when
-  available and otherwise falls back to anchor scrolling behavior for hashed
-  routes.
+- Scroll positions are tracked by router history key in memory and persisted on
+  the active browser history entry so restoration can survive a reload or new
+  router runtime instance.
+- Startup restores a persisted scroll position from the current history entry
+  when one exists; otherwise hashed startup routes still fall back to anchor
+  scrolling.
+- `popstate` restores saved scroll positions from the in-memory cache or the
+  target entry's persisted history state when available, and otherwise falls
+  back to anchor scrolling behavior for hashed routes.
 
 ## Constraints
 
@@ -105,8 +112,11 @@ link-matching behavior, event naming, and scroll behavior.
 - Late-added route links must still receive correct active-state updates.
 - Delegated navigation only intercepts matching route links for same-window,
   primary-button clicks without modifier keys or downloads.
-- `popstate` should restore saved scroll positions when possible and otherwise
-  fall back to hash-anchor scrolling.
+- `popstate` should restore saved scroll positions from memory or persisted
+  target history state when possible and otherwise fall back to hash-anchor
+  scrolling.
+- New router-created history entries must not inherit a previous entry's
+  persisted scroll position.
 
 ## Acceptance Criteria
 
@@ -126,7 +136,7 @@ link-matching behavior, event naming, and scroll behavior.
 - Custom active-link selector, class, and attribute options affect link syncing
   without changing route resolution.
 - Excluded links do not receive active-state attributes.
-- Anchor navigation and history traversal produce the documented scroll
-  behavior.
+- Anchor navigation, persisted history traversal, and fresh link navigation
+  produce the documented scroll behavior.
 - A tarball produced from the package can be installed into a clean temporary
   consumer and imported through the published ESM entrypoint.

@@ -129,6 +129,7 @@ const DEFAULT_SCROLL_BEHAVIOR: ScrollBehavior = "smooth";
 const ELEMENT_NODE = 1;
 const MATCHER_ORIGIN = "https://koppajs-router.local";
 const HISTORY_STATE_KEY = "__koppajsRouterKey";
+const HISTORY_SCROLL_STATE_KEY = "__koppajsRouterScroll";
 const MAX_REDIRECT_DEPTH = 20;
 
 type ParsedRouteTarget = {
@@ -164,6 +165,18 @@ type RenderReason = "load" | "navigate" | "popstate";
 
 const isNamedRouteTarget = (target: RouteTarget): target is NamedRouteTarget =>
   typeof target === "object" && target !== null && "name" in target;
+
+const isScrollPosition = (value: unknown): value is ScrollPosition => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const position = value as Record<string, unknown>;
+  return Number.isFinite(position.left) && Number.isFinite(position.top);
+};
+
+const getHistoryStateRecord = (state: unknown): Record<string, unknown> =>
+  typeof state === "object" && state !== null ? (state as Record<string, unknown>) : {};
 
 const normalizePrimitiveRouteValue = (value: PrimitiveRouteValue): string => String(value);
 
@@ -920,6 +933,8 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
 
   private nextHistoryKey = 1;
 
+  private pendingPopState: unknown = null;
+
   private previousScrollRestoration: History["scrollRestoration"] | null = null;
 
   constructor(private readonly options: KoppajsRouterOptions<TRoute>) {
@@ -947,12 +962,15 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     this.ensureHistoryState();
     this.setManualScrollRestoration();
     this.windowRef.addEventListener("popstate", this.handlePopState);
+    this.windowRef.addEventListener("pagehide", this.handlePageHide);
     this.root.addEventListener("click", this.handleRootClick);
     this.renderCurrentLocation("load", false);
   }
 
   destroy(): void {
+    this.saveScrollPosition(this.currentHistoryKey, true);
     this.windowRef.removeEventListener("popstate", this.handlePopState);
+    this.windowRef.removeEventListener("pagehide", this.handlePageHide);
     this.root.removeEventListener("click", this.handleRootClick);
 
     if (this.navObserver) {
@@ -960,6 +978,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
       this.navObserver = null;
     }
 
+    this.pendingPopState = null;
     this.restoreScrollRestoration();
   }
 
@@ -1026,7 +1045,12 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
       this.ensureHistoryState();
     }
 
+    this.pendingPopState = event.state;
     this.renderCurrentLocation("popstate", true);
+  };
+
+  private readonly handlePageHide = (): void => {
+    this.saveScrollPosition(this.currentHistoryKey, true);
   };
 
   private readonly handleRootClick = (event: Event): void => {
@@ -1101,18 +1125,19 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     resolvedRoute: ResolvedRoute<TRoute>,
     options: Pick<NavigateOptions, "replace" | "scroll">,
   ): void {
-    this.saveScrollPosition(this.currentHistoryKey);
+    this.saveScrollPosition(this.currentHistoryKey, true);
 
     const currentFullPath = this.getLocationTarget().fullPath;
     const targetHref = toHref(resolvedRoute.fullPath, { basePath: this.basePath });
     const currentHref = toHref(currentFullPath, { basePath: this.basePath });
     const shouldReplace = (options.replace ?? false) || currentHref === targetHref;
     const nextKey = this.createHistoryKey();
-    const historyState = (this.windowRef.history.state ?? {}) as Record<string, unknown>;
-    const nextState = {
+    const historyState = getHistoryStateRecord(this.windowRef.history.state);
+    const nextState: Record<string, unknown> = {
       ...historyState,
       [HISTORY_STATE_KEY]: nextKey,
     };
+    delete nextState[HISTORY_SCROLL_STATE_KEY];
 
     if (shouldReplace) {
       this.windowRef.history.replaceState(nextState, "", targetHref);
@@ -1135,7 +1160,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     const nextKey = this.createHistoryKey();
     this.windowRef.history.replaceState(
       {
-        ...(this.windowRef.history.state ?? {}),
+        ...getHistoryStateRecord(this.windowRef.history.state),
         [HISTORY_STATE_KEY]: nextKey,
       },
       "",
@@ -1168,12 +1193,50 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     return null;
   }
 
-  private saveScrollPosition(historyKey: number): void {
+  private saveScrollPosition(historyKey: number, persist = false): void {
     if (!historyKey) {
       return;
     }
 
-    this.scrollPositions.set(historyKey, getScrollPosition(this.windowRef));
+    const position = getScrollPosition(this.windowRef);
+    this.scrollPositions.set(historyKey, position);
+
+    if (persist) {
+      this.persistScrollPosition(historyKey, position);
+    }
+  }
+
+  private persistScrollPosition(historyKey: number, position: ScrollPosition): void {
+    const historyState = getHistoryStateRecord(this.windowRef.history.state);
+
+    if (this.getHistoryStateKey(historyState) !== historyKey) {
+      return;
+    }
+
+    this.windowRef.history.replaceState(
+      {
+        ...historyState,
+        [HISTORY_STATE_KEY]: historyKey,
+        [HISTORY_SCROLL_STATE_KEY]: position,
+      },
+      "",
+      this.windowRef.location.href,
+    );
+  }
+
+  private getSavedScrollPosition(state: unknown): ScrollPosition | null {
+    const mapPosition = this.scrollPositions.get(this.currentHistoryKey);
+
+    if (mapPosition) {
+      return mapPosition;
+    }
+
+    const historyState = getHistoryStateRecord(state);
+    const persistedPosition =
+      historyState[HISTORY_SCROLL_STATE_KEY] ??
+      getHistoryStateRecord(this.windowRef.history.state)[HISTORY_SCROLL_STATE_KEY];
+
+    return isScrollPosition(persistedPosition) ? persistedPosition : null;
   }
 
   private setManualScrollRestoration(): void {
@@ -1273,8 +1336,28 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     reason: RenderReason,
     shouldScroll: boolean,
   ): void {
+    if (reason === "load") {
+      const savedPosition = this.getSavedScrollPosition(this.windowRef.history.state);
+
+      if (savedPosition) {
+        this.windowRef.scrollTo({
+          left: savedPosition.left,
+          top: savedPosition.top,
+          behavior: "auto",
+        });
+        return;
+      }
+
+      if (route.hash !== "") {
+        this.scrollToAnchor(route.hash, "auto");
+      }
+
+      return;
+    }
+
     if (reason === "popstate") {
-      const savedPosition = this.scrollPositions.get(this.currentHistoryKey);
+      const savedPosition = this.getSavedScrollPosition(this.pendingPopState);
+      this.pendingPopState = null;
 
       if (savedPosition) {
         this.windowRef.scrollTo({
@@ -1297,7 +1380,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
       return;
     }
 
-    if (!shouldScroll || reason === "load") {
+    if (!shouldScroll) {
       return;
     }
 

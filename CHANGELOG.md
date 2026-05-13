@@ -21,6 +21,14 @@ Changes will only appear here when they:
 
 ---
 
+## 0.1.3
+
+- persist router scroll positions on browser history entries so back/forward
+  traversal and router restarts restore scroll state after render without
+  regressing anchor navigation or fresh link navigation
+
+---
+
 ## 0.1.2
 
 - raise the repository Node.js baseline to `>= 22`, add an explicit `validate`

@@ -82,6 +82,11 @@ const flushRouterWork = async () => {
   await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
 };
 
+const flushHistoryTraversal = async () => {
+  await new Promise<void>((resolve) => window.setTimeout(() => resolve(), 0));
+  await flushRouterWork();
+};
+
 const registerTestPage = (tagName: string, html: string) => {
   if (customElements.get(tagName)) {
     return;
@@ -134,6 +139,27 @@ const installScrollState = () => {
       };
     },
   };
+};
+
+type RouterHistoryTestState = {
+  __koppajsRouterKey?: number;
+  __koppajsRouterScroll?: {
+    left: number;
+    top: number;
+  };
+};
+
+const getRouterHistoryState = (): RouterHistoryTestState =>
+  window.history.state as RouterHistoryTestState;
+
+const getRouterHistoryKey = (): number => {
+  const historyKey = getRouterHistoryState().__koppajsRouterKey;
+
+  if (typeof historyKey !== "number") {
+    throw new Error("Expected router history state to contain a numeric key.");
+  }
+
+  return historyKey;
 };
 
 describe("koppajs-router", () => {
@@ -652,27 +678,37 @@ describe("koppajs-router", () => {
     expect(scrollIntoViewSpy).toHaveBeenCalled();
     expect(router.getCurrentRoute().hash).toBe("#contact-form");
 
-    const firstHistoryKey = (window.history.state as { __koppajsRouterKey: number })
-      .__koppajsRouterKey;
+    const firstHistoryKey = getRouterHistoryKey();
 
     scrollState.setScroll(240);
     router.navigate("/services");
     await flushRouterWork();
 
-    const secondHistoryKey = (window.history.state as { __koppajsRouterKey: number })
-      .__koppajsRouterKey;
+    const secondHistoryKey = getRouterHistoryKey();
 
     expect(secondHistoryKey).not.toBe(firstHistoryKey);
 
     scrollState.setScroll(860);
     window.history.replaceState(
-      { __koppajsRouterKey: firstHistoryKey },
+      {
+        __koppajsRouterKey: firstHistoryKey,
+        __koppajsRouterScroll: {
+          left: 0,
+          top: 999,
+        },
+      },
       "",
       "/contact#contact-form",
     );
     window.dispatchEvent(
       new PopStateEvent("popstate", {
-        state: { __koppajsRouterKey: firstHistoryKey },
+        state: {
+          __koppajsRouterKey: firstHistoryKey,
+          __koppajsRouterScroll: {
+            left: 0,
+            top: 999,
+          },
+        },
       }),
     );
 
@@ -687,6 +723,280 @@ describe("koppajs-router", () => {
     );
     expect(router.getCurrentRoute().path).toBe("/contact");
     expect(router.getCurrentRoute().hash).toBe("#contact-form");
+  });
+
+  it("restores scroll on real browser back and forward traversal", async () => {
+    const scrollState = installScrollState();
+
+    document.body.innerHTML = `
+      <app-shell>
+        <main id="outlet"></main>
+      </app-shell>
+    `;
+
+    window.history.replaceState({}, "", "/");
+
+    const outlet = document.querySelector<HTMLElement>("#outlet");
+    expect(outlet).toBeTruthy();
+
+    const router = new KoppajsRouter({
+      routes,
+      outlet: outlet!,
+      root: document,
+      scrollBehavior: "auto",
+    });
+
+    router.init();
+    await flushRouterWork();
+
+    scrollState.setScroll(1200);
+    router.navigate("/services");
+    await flushRouterWork();
+
+    scrollState.setScroll(800);
+    window.history.back();
+    await flushHistoryTraversal();
+
+    expect(window.location.pathname).toBe("/");
+    expect(scrollState.getScroll().top).toBe(1200);
+
+    window.history.forward();
+    await flushHistoryTraversal();
+
+    expect(window.location.pathname).toBe("/services");
+    expect(scrollState.getScroll().top).toBe(800);
+  });
+
+  it("restores persisted target-state scroll when the runtime map is empty", async () => {
+    const scrollState = installScrollState();
+
+    document.body.innerHTML = `
+      <app-shell>
+        <main id="outlet"></main>
+      </app-shell>
+    `;
+
+    window.history.replaceState({ __koppajsRouterKey: 9 }, "", "/services");
+
+    const outlet = document.querySelector<HTMLElement>("#outlet");
+    expect(outlet).toBeTruthy();
+
+    const router = new KoppajsRouter({
+      routes,
+      outlet: outlet!,
+      root: document,
+    });
+
+    router.init();
+    await flushRouterWork();
+
+    const targetState = {
+      __koppajsRouterKey: 4,
+      __koppajsRouterScroll: {
+        left: 16,
+        top: 640,
+      },
+    };
+
+    scrollState.setScroll(1200, 8);
+    window.history.replaceState(targetState, "", "/contact");
+    window.dispatchEvent(
+      new PopStateEvent("popstate", {
+        state: targetState,
+      }),
+    );
+
+    await flushRouterWork();
+
+    expect(scrollState.getScroll()).toEqual({
+      left: 16,
+      top: 640,
+    });
+    expect(scrollState.scrollToSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        left: 16,
+        top: 640,
+        behavior: "auto",
+      }),
+    );
+    expect(router.getCurrentRoute().path).toBe("/contact");
+  });
+
+  it("restores persisted scroll on router startup after a reload", async () => {
+    const scrollState = installScrollState();
+
+    document.body.innerHTML = `
+      <app-shell>
+        <main id="outlet"></main>
+      </app-shell>
+    `;
+
+    window.history.replaceState(
+      {
+        __koppajsRouterKey: 12,
+        __koppajsRouterScroll: {
+          left: 4,
+          top: 880,
+        },
+      },
+      "",
+      "/services",
+    );
+
+    const outlet = document.querySelector<HTMLElement>("#outlet");
+    expect(outlet).toBeTruthy();
+
+    const router = new KoppajsRouter({
+      routes,
+      outlet: outlet!,
+      root: document,
+    });
+
+    router.init();
+    await flushRouterWork();
+
+    expect(scrollState.getScroll()).toEqual({
+      left: 4,
+      top: 880,
+    });
+    expect(scrollState.scrollToSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        left: 4,
+        top: 880,
+        behavior: "auto",
+      }),
+    );
+    expect(router.getCurrentRoute().path).toBe("/services");
+  });
+
+  it("preserves persisted forward scroll after a router restart and back traversal", async () => {
+    const scrollState = installScrollState();
+
+    document.body.innerHTML = `
+      <app-shell>
+        <main id="outlet"></main>
+      </app-shell>
+    `;
+
+    window.history.replaceState({}, "", "/");
+
+    const outlet = document.querySelector<HTMLElement>("#outlet");
+    expect(outlet).toBeTruthy();
+
+    const createRouter = () =>
+      new KoppajsRouter({
+        routes,
+        outlet: outlet!,
+        root: document,
+        scrollBehavior: "auto",
+      });
+
+    let router = createRouter();
+
+    router.init();
+    await flushRouterWork();
+
+    scrollState.setScroll(1200);
+    router.navigate("/services");
+    await flushRouterWork();
+
+    scrollState.setScroll(800);
+    window.dispatchEvent(new Event("pagehide"));
+    router.destroy();
+
+    router = createRouter();
+    router.init();
+    await flushRouterWork();
+
+    expect(scrollState.getScroll().top).toBe(800);
+
+    window.history.back();
+    await flushHistoryTraversal();
+
+    expect(window.location.pathname).toBe("/");
+    expect(scrollState.getScroll().top).toBe(1200);
+
+    window.history.forward();
+    await flushHistoryTraversal();
+
+    expect(window.location.pathname).toBe("/services");
+    expect(scrollState.getScroll().top).toBe(800);
+  });
+
+  it("saves current scroll into history state on pagehide", async () => {
+    const scrollState = installScrollState();
+
+    document.body.innerHTML = `
+      <app-shell>
+        <main id="outlet"></main>
+      </app-shell>
+    `;
+
+    window.history.replaceState({}, "", "/services");
+
+    const outlet = document.querySelector<HTMLElement>("#outlet");
+    expect(outlet).toBeTruthy();
+
+    const router = new KoppajsRouter({
+      routes,
+      outlet: outlet!,
+      root: document,
+    });
+
+    router.init();
+    await flushRouterWork();
+
+    const historyKey = getRouterHistoryKey();
+
+    scrollState.setScroll(520, 12);
+    window.dispatchEvent(new Event("pagehide"));
+
+    expect(getRouterHistoryState()).toEqual(
+      expect.objectContaining({
+        __koppajsRouterKey: historyKey,
+        __koppajsRouterScroll: {
+          left: 12,
+          top: 520,
+        },
+      }),
+    );
+  });
+
+  it("does not copy persisted scroll state into new history entries", async () => {
+    const scrollState = installScrollState();
+
+    document.body.innerHTML = `
+      <app-shell>
+        <main id="outlet"></main>
+      </app-shell>
+    `;
+
+    window.history.replaceState({}, "", "/");
+
+    const outlet = document.querySelector<HTMLElement>("#outlet");
+    expect(outlet).toBeTruthy();
+
+    const router = new KoppajsRouter({
+      routes,
+      outlet: outlet!,
+      root: document,
+    });
+
+    router.init();
+    await flushRouterWork();
+
+    scrollState.setScroll(720);
+    window.dispatchEvent(new Event("pagehide"));
+
+    expect(getRouterHistoryState().__koppajsRouterScroll).toEqual({
+      left: 0,
+      top: 720,
+    });
+
+    router.navigate("/services");
+    await flushRouterWork();
+
+    expect(getRouterHistoryState().__koppajsRouterScroll).toBeUndefined();
   });
 
   it("assigns monotonic history keys across navigation after browser history traversal", async () => {
@@ -748,6 +1058,7 @@ describe("koppajs-router", () => {
   });
 
   it("restores scroll restoration and disconnects route-link syncing on destroy", async () => {
+    const scrollState = installScrollState();
     let scrollRestoration: History["scrollRestoration"] = "auto";
 
     Object.defineProperty(window.history, "scrollRestoration", {
@@ -780,9 +1091,20 @@ describe("koppajs-router", () => {
 
     expect(window.history.scrollRestoration).toBe("manual");
 
+    const historyKey = getRouterHistoryKey();
+    scrollState.setScroll(350, 6);
     router.destroy();
 
     expect(window.history.scrollRestoration).toBe("auto");
+    expect(getRouterHistoryState()).toEqual(
+      expect.objectContaining({
+        __koppajsRouterKey: historyKey,
+        __koppajsRouterScroll: {
+          left: 6,
+          top: 350,
+        },
+      }),
+    );
 
     document.querySelector("app-shell")?.insertAdjacentHTML(
       "afterbegin",
