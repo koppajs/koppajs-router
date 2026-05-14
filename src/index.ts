@@ -130,6 +130,7 @@ const ELEMENT_NODE = 1;
 const MATCHER_ORIGIN = "https://koppajs-router.local";
 const HISTORY_STATE_KEY = "__koppajsRouterKey";
 const HISTORY_SCROLL_STATE_KEY = "__koppajsRouterScroll";
+const HISTORY_SCROLL_RESTORE_MAX_FRAMES = 60;
 const MAX_REDIRECT_DEPTH = 20;
 
 type ParsedRouteTarget = {
@@ -159,6 +160,10 @@ type RouteRegistry<TRoute extends RouteDefinition = RouteDefinition> = {
 type ScrollPosition = {
   left: number;
   top: number;
+};
+
+type ScrollRestoreOptions = {
+  shouldContinue?: () => boolean;
 };
 
 type RenderReason = "load" | "navigate" | "popstate";
@@ -874,13 +879,85 @@ const getScrollPosition = (windowRef: Window): ScrollPosition => ({
   top: windowRef.scrollY,
 });
 
-const restoreScrollPosition = (windowRef: Window, position: ScrollPosition): void => {
+const hasRestoredScrollPosition = (windowRef: Window, position: ScrollPosition): boolean =>
+  Math.round(windowRef.scrollX) === Math.round(position.left) &&
+  Math.round(windowRef.scrollY) === Math.round(position.top);
+
+const getMaxScrollPosition = (windowRef: Window): ScrollPosition | null => {
+  const scrollingElement = windowRef.document.scrollingElement;
+
+  if (!scrollingElement) {
+    return null;
+  }
+
+  return {
+    left: Math.max(0, scrollingElement.scrollWidth - scrollingElement.clientWidth),
+    top: Math.max(0, scrollingElement.scrollHeight - scrollingElement.clientHeight),
+  };
+};
+
+const canReachScrollPosition = (maxPosition: ScrollPosition | null, position: ScrollPosition) =>
+  maxPosition === null || (position.left <= maxPosition.left && position.top <= maxPosition.top);
+
+const restoreScrollPositionOnce = (windowRef: Window, position: ScrollPosition): void => {
   // History restores must bypass document-level CSS smooth scrolling.
   windowRef.scrollTo({
     left: position.left,
     top: position.top,
     behavior: "instant",
   });
+};
+
+const restoreScrollPosition = (
+  windowRef: Window,
+  position: ScrollPosition,
+  options: ScrollRestoreOptions = {},
+): void => {
+  const shouldContinue = options.shouldContinue ?? (() => true);
+  let frames = 0;
+  let previousMaxPosition = getMaxScrollPosition(windowRef);
+
+  const scheduleRetry = (): void => {
+    if (
+      !shouldContinue() ||
+      hasRestoredScrollPosition(windowRef, position) ||
+      frames >= HISTORY_SCROLL_RESTORE_MAX_FRAMES
+    ) {
+      return;
+    }
+
+    frames += 1;
+
+    const retry = (): void => {
+      if (!shouldContinue()) {
+        return;
+      }
+
+      const nextMaxPosition = getMaxScrollPosition(windowRef);
+      const maxScrollChanged =
+        previousMaxPosition === null ||
+        nextMaxPosition === null ||
+        previousMaxPosition.left !== nextMaxPosition.left ||
+        previousMaxPosition.top !== nextMaxPosition.top;
+
+      if (maxScrollChanged || canReachScrollPosition(nextMaxPosition, position)) {
+        restoreScrollPositionOnce(windowRef, position);
+      }
+
+      previousMaxPosition = nextMaxPosition;
+      scheduleRetry();
+    };
+
+    if (typeof windowRef.requestAnimationFrame === "function") {
+      windowRef.requestAnimationFrame(retry);
+      return;
+    }
+
+    windowRef.setTimeout(retry, 16);
+  };
+
+  restoreScrollPositionOnce(windowRef, position);
+  scheduleRetry();
 };
 
 const getAnchorElement = (documentRef: Document, hash: string): HTMLElement | null => {
@@ -946,6 +1023,8 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
 
   private previousScrollRestoration: History["scrollRestoration"] | null = null;
 
+  private scrollRestoreVersion = 0;
+
   constructor(private readonly options: KoppajsRouterOptions<TRoute>) {
     if (options.routes.length === 0) {
       throw new Error("KoppajsRouter requires at least one route.");
@@ -988,6 +1067,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     }
 
     this.pendingPopState = null;
+    this.scrollRestoreVersion += 1;
     this.restoreScrollRestoration();
   }
 
@@ -1323,6 +1403,8 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     setDocumentDescription(this.documentRef, route.description);
     this.currentRoute = route;
     setActiveRouteLinks(this.root, route.path, this.activeRouteLinkOptions);
+    this.scrollRestoreVersion += 1;
+    const scrollRestoreVersion = this.scrollRestoreVersion;
     this.windowRef.dispatchEvent(
       new CustomEvent<RouteChangeDetail<TRoute>>(this.routeChangeEventName, {
         detail: {
@@ -1336,7 +1418,11 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     );
 
     waitForNextPaint(this.windowRef, () => {
-      this.applyScroll(route, reason, shouldScroll);
+      if (scrollRestoreVersion !== this.scrollRestoreVersion) {
+        return;
+      }
+
+      this.applyScroll(route, reason, shouldScroll, scrollRestoreVersion);
     });
   }
 
@@ -1344,12 +1430,15 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     route: ResolvedRoute<TRoute>,
     reason: RenderReason,
     shouldScroll: boolean,
+    scrollRestoreVersion: number,
   ): void {
     if (reason === "load") {
       const savedPosition = this.getSavedScrollPosition(this.windowRef.history.state);
 
       if (savedPosition) {
-        restoreScrollPosition(this.windowRef, savedPosition);
+        restoreScrollPosition(this.windowRef, savedPosition, {
+          shouldContinue: () => scrollRestoreVersion === this.scrollRestoreVersion,
+        });
         return;
       }
 
@@ -1365,7 +1454,9 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
       this.pendingPopState = null;
 
       if (savedPosition) {
-        restoreScrollPosition(this.windowRef, savedPosition);
+        restoreScrollPosition(this.windowRef, savedPosition, {
+          shouldContinue: () => scrollRestoreVersion === this.scrollRestoreVersion,
+        });
         return;
       }
 

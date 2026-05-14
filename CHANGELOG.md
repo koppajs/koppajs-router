@@ -21,6 +21,14 @@ Changes will only appear here when they:
 
 ---
 
+## 0.1.5
+
+- retry instant history scroll restoration across short post-render layout
+  stabilization windows so asynchronous route content can expand the page
+  before the saved position is considered final
+
+---
+
 ## 0.1.4
 
 - restore persisted history scroll positions instantly so global CSS smooth
