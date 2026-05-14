@@ -71,10 +71,13 @@ link-matching behavior, event naming, and scroll behavior.
   router runtime instance.
 - Startup restores a persisted scroll position from the current history entry
   instantly when one exists, bypassing document-level CSS smooth scrolling;
-  otherwise hashed startup routes still fall back to anchor scrolling.
+  the instant restore is retried for a short post-render window so asynchronous
+  route layout can grow the scroll range before hashed startup routes fall back
+  to anchor scrolling.
 - `popstate` restores saved scroll positions from the in-memory cache or the
-  target entry's persisted history state instantly when available, and
-  otherwise falls back to anchor scrolling behavior for hashed routes.
+  target entry's persisted history state instantly when available, retrying
+  briefly across post-render layout growth, and otherwise falls back to anchor
+  scrolling behavior for hashed routes.
 
 ## Constraints
 
@@ -113,8 +116,8 @@ link-matching behavior, event naming, and scroll behavior.
 - Delegated navigation only intercepts matching route links for same-window,
   primary-button clicks without modifier keys or downloads.
 - `popstate` should restore saved scroll positions from memory or persisted
-  target history state instantly when possible and otherwise fall back to
-  hash-anchor scrolling.
+  target history state instantly when possible, tolerate short async layout
+  stabilization windows, and otherwise fall back to hash-anchor scrolling.
 - New router-created history entries must not inherit a previous entry's
   persisted scroll position.
 

@@ -101,9 +101,23 @@ const registerTestPage = (tagName: string, html: string) => {
   customElements.define(tagName, TestPageElement);
 };
 
-const installScrollState = () => {
+type ScrollStateOptions = {
+  getMaxScroll?: () => {
+    left?: number;
+    top?: number;
+  };
+};
+
+const installScrollState = (options: ScrollStateOptions = {}) => {
   let scrollLeft = 0;
   let scrollTop = 0;
+
+  const applyScroll = (left: number, top: number) => {
+    const maxScroll = options.getMaxScroll?.();
+
+    scrollLeft = Math.min(left, maxScroll?.left ?? left);
+    scrollTop = Math.min(top, maxScroll?.top ?? top);
+  };
 
   Object.defineProperty(window, "scrollX", {
     configurable: true,
@@ -117,13 +131,11 @@ const installScrollState = () => {
   const scrollToSpy = vi.spyOn(window, "scrollTo").mockImplementation((xOrOptions, y) => {
     if (typeof xOrOptions === "object" && xOrOptions !== null) {
       const scrollOptions = xOrOptions as ScrollToOptions;
-      scrollLeft = Number(scrollOptions.left ?? scrollLeft);
-      scrollTop = Number(scrollOptions.top ?? scrollTop);
+      applyScroll(Number(scrollOptions.left ?? scrollLeft), Number(scrollOptions.top ?? scrollTop));
       return;
     }
 
-    scrollLeft = Number(xOrOptions ?? scrollLeft);
-    scrollTop = Number(y ?? scrollTop);
+    applyScroll(Number(xOrOptions ?? scrollLeft), Number(y ?? scrollTop));
   });
 
   return {
@@ -881,6 +893,63 @@ describe("koppajs-router", () => {
       }),
     );
     expect(router.getCurrentRoute().path).toBe("/services");
+  });
+
+  it("retries instant persisted scroll restore while async route layout expands", async () => {
+    let maxScrollTop = 320;
+    const scrollState = installScrollState({
+      getMaxScroll: () => ({
+        left: 0,
+        top: maxScrollTop,
+      }),
+    });
+
+    document.body.innerHTML = `
+      <app-shell>
+        <main id="outlet"></main>
+      </app-shell>
+    `;
+
+    window.history.replaceState(
+      {
+        __koppajsRouterKey: 12,
+        __koppajsRouterScroll: {
+          left: 0,
+          top: 960,
+        },
+      },
+      "",
+      "/services",
+    );
+
+    const outlet = document.querySelector<HTMLElement>("#outlet");
+    expect(outlet).toBeTruthy();
+
+    const router = new KoppajsRouter({
+      routes,
+      outlet: outlet!,
+      root: document,
+    });
+
+    router.init();
+    await flushRouterWork();
+
+    expect(scrollState.getScroll().top).toBe(320);
+
+    maxScrollTop = 960;
+    await flushRouterWork();
+
+    const instantRestoreCalls = scrollState.scrollToSpy.mock.calls.filter(([xOrOptions]) => {
+      if (typeof xOrOptions !== "object" || xOrOptions === null) {
+        return false;
+      }
+
+      const scrollOptions = xOrOptions as ScrollToOptions;
+      return scrollOptions.top === 960 && scrollOptions.behavior === "instant";
+    });
+
+    expect(scrollState.getScroll().top).toBe(960);
+    expect(instantRestoreCalls.length).toBeGreaterThan(1);
   });
 
   it("preserves persisted forward scroll after a router restart and back traversal", async () => {
