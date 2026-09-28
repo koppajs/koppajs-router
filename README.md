@@ -50,6 +50,7 @@
     <li><a href="#ownership-boundaries">Ownership Boundaries</a></li>
     <li><a href="#usage">Usage</a></li>
     <li><a href="#runtime-behavior">Runtime Behavior</a></li>
+    <li><a href="#navigation-hooks">Navigation Hooks</a></li>
     <li><a href="#runtime-options">Runtime Options</a></li>
     <li><a href="#route-matching-rules">Route Matching Rules</a></li>
     <li><a href="#build-and-distribution">Build And Distribution</a></li>
@@ -119,8 +120,9 @@ The public surface is deliberately small.
 Main runtime surface:
 
 - `KoppajsRouter`
-- `RouteDefinition`, `ResolvedRoute`, `RedirectedRoute`, and related route
-  types
+- `RouteDefinition`, `ResolvedRoute`, `RedirectedRoute`, `RouteNavigationContext`,
+  `RouteBeforeNavigateContext`, `RouteNavigationReason`,
+  `RouteBeforeNavigateHook`, `RouteAfterNavigateHook`, and related route types
 - `normalizePath()`, `normalizeHash()`, `normalizeBasePath()`
 - `toHref()` and `fromLocationPathname()`
 - `resolveRoute()` and `resolveRouteByName()`
@@ -133,6 +135,8 @@ Runtime instance helpers:
 
 - `router.resolve()` / `router.resolveByName()`
 - `router.navigate()` / `router.navigateByName()`
+- `router.onBeforeNavigate()` / `router.onAfterNavigate()` (each returns an
+  unsubscribe function)
 - `router.hrefFor()`
 - `router.getCurrentPath()` / `router.getCurrentRoute()`
 
@@ -269,6 +273,63 @@ Navigation flow:
   together
 - scroll behavior is applied after render, including anchor navigation and
   saved-history restoration from memory or persisted history state
+
+---
+
+## Navigation Hooks
+
+Register hooks on the router instance before `init()` if an after hook should
+observe the initial render. Hooks are synchronous and belong to the router
+runtime; the application owns policies such as authorization and analytics.
+
+```ts
+const stopGuard = router.onBeforeNavigate(({ from, to }) => {
+  // consumerCanVisit is an application-owned synchronous function.
+  if (!consumerCanVisit(to)) return false;
+  console.log("Leaving", from?.path ?? "initial location");
+});
+
+const stopTracking = router.onAfterNavigate(({ from, to, reason }) => {
+  trackRoute({ from: from?.fullPath ?? null, to: to.fullPath, reason });
+});
+
+router.init();
+
+// When one integration is no longer needed, remove only its registration:
+stopTracking();
+// When replacing the entire router, remove its browser listeners and all hooks:
+router.destroy();
+// stopGuard() is now harmless, because destroy() cleared the registration.
+```
+
+`onBeforeNavigate()` runs only for `navigate()` / `navigateByName()` and
+intercepted route-link clicks, once the final target has been resolved (including
+redirects) and checked for renderability but **before** URL/history, scroll
+snapshot, or rendering changes. Returning exactly `false` cancels the attempt;
+returning nothing allows it. The `navigate*()` methods still return `void`. A
+canceled intercepted click remains intercepted; it does not trigger native
+navigation. Pure `resolve*()` and `hrefFor()` calls do not invoke hooks.
+
+`onAfterNavigate()` runs after a successful render and the existing
+`koppajs-route-change` event, before deferred scroll work. Its `reason` is
+`"load"`, `"navigate"`, or `"popstate"`. There is no cancellable before phase
+for load or browser back/forward: the browser URL has already changed. The
+existing event name and `RouteChangeDetail` payload are unchanged; event users
+do not need to migrate.
+
+Each registration returns its own idempotent unsubscribe function. Hooks run in
+registration order; registrations made during dispatch wait until the next
+dispatch, while unsubscribe takes effect immediately. `destroy()` clears all
+hooks, so register again if the same instance is initialized again. Do not
+mutate the observed resolved route or its source record. Navigating _inside a
+hook_ throws; navigation from an existing route-change event can supersede an
+older route's after hook.
+
+Async hooks are not supported: promise-like return values throw a synchronous
+error. A thrown before hook leaves the navigation uncommitted; a thrown after
+hook stops later after hooks but cannot undo the already changed URL, rendered
+content, or emitted event. Errors from route matching and rendering remain
+errors, not cancellations.
 
 ---
 

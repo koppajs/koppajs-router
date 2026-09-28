@@ -21,7 +21,8 @@ four logical layers:
 3. DOM synchronization helpers: document description updates, route-link active
    state synchronization, deferred paint waiting, and anchor lookup.
 4. Runtime orchestration: `KoppajsRouter`, which wires browser events, history
-   state, rendering, route-change events, and scroll restoration together.
+   state, rendering, route-change events, per-instance navigation hooks, and
+   scroll restoration together.
 
 This layering is intentional. Pure resolution logic must stay reusable and
 testable without the router class, while browser side effects remain explicit at
@@ -89,13 +90,16 @@ On navigation:
 
 1. The router resolves either a direct path or named route target into a
    `ResolvedRoute`.
-2. The resolved route is converted into a base-path-aware browser href.
-3. The current entry's scroll position is saved, then history state is pushed
+2. The final route is validated for rendering, then synchronous before hooks
+   can cancel without changing scroll or history state.
+3. The resolved route is converted into a base-path-aware browser href.
+4. The current entry's scroll position is saved, then history state is pushed
    or replaced with a fresh router key and no inherited scroll snapshot.
-4. The outlet is re-rendered with the route's `componentTag`.
-5. Document title, description, active links, and the route-change event are
-   updated.
-6. After two paints, the router applies either top scrolling, anchor
+5. The outlet is re-rendered with the route's `componentTag`.
+6. Document title, description, active links, and the route-change event are
+   updated; after hooks observe committed routes for navigation, initial load,
+   and browser traversal.
+7. After two paints, the router applies either top scrolling, anchor
    scrolling, or saved-history scroll restoration.
 
 On browser history traversal:
@@ -108,7 +112,8 @@ On browser history traversal:
 
 On teardown:
 
-1. `destroy()` removes event listeners and disconnects the mutation observer.
+1. `destroy()` removes event listeners, disconnects the mutation observer,
+   and clears all per-instance hook registrations.
 2. The router restores the browser's previous `history.scrollRestoration`
    setting.
 

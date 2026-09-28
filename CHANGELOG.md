@@ -12,12 +12,9 @@ not every internal refactor.
 
 ## [Unreleased]
 
-This section is intentionally empty.
-Changes will only appear here when they:
-
-- affect repository behavior or public guidance,
-- change contributor workflow or governance,
-- or alter the documented package or repository contract.
+- add synchronous, per-instance before-navigation cancellation and after-render
+  observation hooks with idempotent unsubscribe and lifecycle cleanup while
+  preserving existing route-change events
 
 ---
 

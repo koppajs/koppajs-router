@@ -10,6 +10,7 @@ import {
   toHref,
   type RouteChangeDetail,
   type RouteDefinition,
+  type RouteNavigationContext,
 } from "../../src/index";
 
 type TestRoute = RouteDefinition<{
@@ -1205,6 +1206,281 @@ describe("koppajs-router", () => {
         .querySelector<HTMLAnchorElement>('a[data-route="/services"]')
         ?.classList.contains("is-active"),
     ).toBe(false);
+  });
+
+  describe("navigation hooks", () => {
+    const createHookRouter = (
+      options: Partial<ConstructorParameters<typeof KoppajsRouter>[0]> = {},
+    ) => {
+      document.body.innerHTML = `
+        <nav><a data-route="/contact" href="/contact">Contact</a></nav>
+        <main id="outlet"></main>
+      `;
+      const outlet = document.querySelector<HTMLElement>("#outlet")!;
+      const router = new KoppajsRouter({ routes, outlet, root: document, ...options });
+      return { router, outlet };
+    };
+
+    it("runs before hooks in order on final direct and named targets and preserves event order", () => {
+      const { router, outlet } = createHookRouter();
+      const order: string[] = [];
+      const event = vi.fn(() => order.push("event"));
+      window.addEventListener(KOPPAJS_ROUTE_CHANGE_EVENT, event);
+      router.onBeforeNavigate(({ from, to, reason }) => {
+        expect(reason).toBe("navigate");
+        order.push(`first:${from?.path}->${to.fullPath}`);
+      });
+      router.onBeforeNavigate(({ to }) => {
+        order.push(`second:${to.path}`);
+      });
+      router.onAfterNavigate(({ from, to, reason }) => {
+        expect(outlet.querySelector(to.componentTag!)).toBeTruthy();
+        order.push(`after:${from?.path ?? "null"}->${to.fullPath}:${reason}`);
+      });
+      router.init();
+      expect(order).toEqual(["event", "after:null->/:load"]);
+      order.length = 0;
+      router.navigate("/guides?ref=nav#section", { scroll: false });
+      expect(order).toEqual([
+        "first:/->/guides/introduction?ref=nav#section",
+        "second:/guides/introduction",
+        "event",
+        "after:/->/guides/introduction?ref=nav#section:navigate",
+      ]);
+      order.length = 0;
+      router.navigateByName("contact", { replace: true, scroll: false });
+      expect(order).toEqual([
+        "first:/guides/introduction->/contact",
+        "second:/contact",
+        "event",
+        "after:/guides/introduction->/contact:navigate",
+      ]);
+      router.destroy();
+      window.removeEventListener(KOPPAJS_ROUTE_CHANGE_EVENT, event);
+    });
+
+    it("cancels programmatic and intercepted-click navigation before any side effects", () => {
+      const root = document.createDocumentFragment();
+      const { router, outlet } = createHookRouter({ basePath: "/preview/", root });
+      root.append(document.querySelector("a")!, outlet);
+      window.history.replaceState({}, "", "/preview/");
+      const scroll = installScrollState();
+      const event = vi.fn();
+      window.addEventListener(KOPPAJS_ROUTE_CHANGE_EVENT, event);
+      router.init();
+      event.mockClear();
+      const oldState = structuredClone(window.history.state as RouterHistoryTestState);
+      const oldMarkup = outlet.innerHTML;
+      const oldTitle = document.title;
+      const oldDescription = document
+        .querySelector('meta[name="description"]')
+        ?.getAttribute("content");
+      const after = vi.fn();
+      router.onBeforeNavigate(() => false);
+      router.onAfterNavigate(after);
+      router.navigateByName("contact");
+      const click = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+      root.querySelector("a")?.dispatchEvent(click);
+      expect(click.defaultPrevented).toBe(true);
+      expect(window.location.pathname).toBe("/preview/");
+      expect(window.history.state).toEqual(oldState);
+      expect(outlet.innerHTML).toBe(oldMarkup);
+      expect(document.title).toBe(oldTitle);
+      expect(document.querySelector('meta[name="description"]')?.getAttribute("content")).toBe(
+        oldDescription,
+      );
+      expect(router.getCurrentRoute().path).toBe("/");
+      expect(event).not.toHaveBeenCalled();
+      expect(after).not.toHaveBeenCalled();
+      expect(scroll.scrollToSpy).not.toHaveBeenCalled();
+      router.destroy();
+      window.removeEventListener(KOPPAJS_ROUTE_CHANGE_EVENT, event);
+    });
+
+    it("unsubscribes immediately, defers added subscriptions, and clears them on destroy", () => {
+      const { router } = createHookRouter();
+      router.init();
+      const calls: string[] = [];
+      let stopSecond = () => {};
+      const stopFirst = router.onBeforeNavigate(() => {
+        calls.push("first");
+        stopSecond();
+        router.onBeforeNavigate(() => {
+          calls.push("late");
+        });
+      });
+      stopSecond = router.onBeforeNavigate(() => {
+        calls.push("second");
+      });
+      router.navigate("/contact", { scroll: false });
+      expect(calls).toEqual(["first"]);
+      stopFirst();
+      stopFirst();
+      router.navigate("/", { scroll: false });
+      expect(calls).toEqual(["first", "late"]);
+      router.destroy();
+      router.init();
+      router.navigate("/contact", { scroll: false });
+      expect(calls).toEqual(["first", "late"]);
+      router.destroy();
+    });
+
+    it("propagates before errors without commit and after errors after commit", () => {
+      const { router, outlet } = createHookRouter();
+      router.init();
+      const stopBefore = router.onBeforeNavigate(() => {
+        throw new Error("guard failed");
+      });
+      expect(() => router.navigate("/contact")).toThrow("guard failed");
+      expect(window.location.pathname).toBe("/");
+      expect(outlet.querySelector("home-page")).toBeTruthy();
+      stopBefore();
+      const later = vi.fn();
+      const event = vi.fn();
+      window.addEventListener(KOPPAJS_ROUTE_CHANGE_EVENT, event);
+      router.onAfterNavigate(() => {
+        throw new Error("observer failed");
+      });
+      router.onAfterNavigate(later);
+      expect(() => router.navigate("/contact", { scroll: false })).toThrow("observer failed");
+      expect(window.location.pathname).toBe("/contact");
+      expect(outlet.querySelector("contact-page")).toBeTruthy();
+      expect(event).toHaveBeenCalledTimes(1);
+      expect(later).not.toHaveBeenCalled();
+      router.destroy();
+      window.removeEventListener(KOPPAJS_ROUTE_CHANGE_EVENT, event);
+    });
+
+    it("rejects async returns and nested navigation from hooks", () => {
+      const { router } = createHookRouter();
+      router.init();
+      const stopAsync = router.onBeforeNavigate((() =>
+        Promise.resolve(false)) as unknown as () => false);
+      expect(() => router.navigate("/contact")).toThrow(/synchronous/);
+      expect(window.location.pathname).toBe("/");
+      stopAsync();
+      router.onBeforeNavigate(() => {
+        expect(() => router.navigate("/services")).toThrow(/inside a navigation hook/);
+        return false;
+      });
+      router.navigate("/contact");
+      expect(window.location.pathname).toBe("/");
+      router.destroy();
+    });
+
+    it("skips superseded after hooks when a route-change listener navigates again", () => {
+      const { router } = createHookRouter();
+      router.init();
+      const observed: RouteNavigationContext[] = [];
+      router.onAfterNavigate((context) => {
+        observed.push(context);
+      });
+      const redirectInEvent = (event: Event) => {
+        if ((event as CustomEvent<RouteChangeDetail>).detail.path === "/contact") {
+          router.navigate("/services", { scroll: false });
+        }
+      };
+      window.addEventListener(KOPPAJS_ROUTE_CHANGE_EVENT, redirectInEvent);
+      router.navigate("/contact", { scroll: false });
+      expect(window.location.pathname).toBe("/services");
+      expect(observed).toHaveLength(1);
+      expect(observed[0]?.from?.path).toBe("/contact");
+      expect(observed[0]?.to.path).toBe("/services");
+      router.destroy();
+      window.removeEventListener(KOPPAJS_ROUTE_CHANGE_EVENT, redirectInEvent);
+    });
+
+    it("rejects async after results after committing and rejects nested navigation", () => {
+      const { router, outlet } = createHookRouter();
+      router.init();
+      const stopNested = router.onAfterNavigate(() => {
+        expect(() => router.navigateByName("services")).toThrow(/inside a navigation hook/);
+      });
+      router.navigate("/services", { scroll: false });
+      stopNested();
+      router.onAfterNavigate((() => Promise.resolve()) as unknown as () => void);
+      expect(() => router.navigate("/contact", { scroll: false })).toThrow(/synchronous/);
+      expect(window.location.pathname).toBe("/contact");
+      expect(outlet.querySelector("contact-page")).toBeTruthy();
+      router.destroy();
+    });
+
+    it("keeps frozen route records untouched and validates rendering before hooks and history", () => {
+      const frozen = [
+        Object.freeze({
+          path: "/",
+          title: "Home",
+          description: "Landing page",
+          componentTag: "home-page",
+        }),
+        Object.freeze({ path: "/incomplete" }),
+      ];
+      const { router } = createHookRouter({ routes: frozen, document, window });
+      const before = vi.fn();
+      router.onBeforeNavigate(before);
+      router.init();
+      const oldState = structuredClone(window.history.state as RouterHistoryTestState);
+      expect(() => router.navigate("/incomplete")).toThrow(/cannot render route/);
+      expect(before).not.toHaveBeenCalled();
+      expect(window.history.state).toEqual(oldState);
+      router.navigate("/", { replace: true, scroll: false });
+      expect(before).toHaveBeenCalledTimes(1);
+      expect(router.getCurrentRoute().record).toBe(frozen[0]);
+      expect(frozen[0]).not.toHaveProperty("params");
+      router.destroy();
+    });
+
+    it("allows duplicate callback registrations to be stopped independently", () => {
+      const { router } = createHookRouter();
+      router.init();
+      const callback = vi.fn();
+      const stopOne = router.onAfterNavigate(callback);
+      router.onAfterNavigate(callback);
+      router.navigate("/contact", { scroll: false });
+      expect(callback).toHaveBeenCalledTimes(2);
+      stopOne();
+      router.navigate("/", { scroll: false });
+      expect(callback).toHaveBeenCalledTimes(3);
+      router.destroy();
+    });
+
+    it("observes load and popstate without a cancellable before phase", async () => {
+      installScrollState();
+      const { router } = createHookRouter();
+      const before = vi.fn();
+      const observed: RouteNavigationContext[] = [];
+      router.onBeforeNavigate(before);
+      router.onAfterNavigate((context) => {
+        observed.push(context);
+      });
+      router.init();
+      expect(before).not.toHaveBeenCalled();
+      expect(observed[0]?.from).toBeNull();
+      expect(observed[0]?.reason).toBe("load");
+      router.navigate("/contact", { scroll: false });
+      observed.length = 0;
+      before.mockClear();
+      window.history.back();
+      await flushHistoryTraversal();
+      expect(before).not.toHaveBeenCalled();
+      expect(observed).toHaveLength(1);
+      expect(observed[0]?.from?.path).toBe("/contact");
+      expect(observed[0]?.to.path).toBe("/");
+      expect(observed[0]?.reason).toBe("popstate");
+      observed.length = 0;
+      window.history.replaceState({ __koppajsRouterKey: 99 }, "", "/contact");
+      window.dispatchEvent(
+        new PopStateEvent("popstate", {
+          state: { __koppajsRouterKey: 99 },
+        }),
+      );
+      expect(before).not.toHaveBeenCalled();
+      expect(observed).toHaveLength(1);
+      expect(observed[0]?.from?.path).toBe("/");
+      expect(observed[0]?.to.path).toBe("/contact");
+      expect(observed[0]?.reason).toBe("popstate");
+      router.destroy();
+    });
   });
 
   it("throws a clear error when the final resolved route is not renderable", () => {

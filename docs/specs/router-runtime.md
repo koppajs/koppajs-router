@@ -43,6 +43,8 @@ link-matching behavior, event naming, and scroll behavior.
 - immutable `ResolvedRoute` objects through `resolveRoute`,
   `resolveRouteByName`, and router instance helpers
 - router lifecycle control through `init()` and `destroy()`
+- per-instance synchronous navigation hooks through `onBeforeNavigate()` and
+  `onAfterNavigate()`, each returning an idempotent unsubscribe function
 - normalized active-path reads through `router.getCurrentPath()`
 - DOM side effects through `KoppajsRouter`, including outlet rendering,
   document title and description updates, active-link updates, route-change
@@ -66,6 +68,28 @@ link-matching behavior, event naming, and scroll behavior.
 - Successful navigation updates history, outlet markup, document title,
   description metadata, active-link state, emitted route-change events, and
   scroll behavior from one resolved route object.
+- Before hooks receive a read-only context with `from` (previous resolved route
+  or `null`), the final `to` route after redirects, and reason `navigate`. They
+  run only on imperative navigation, including intercepted links, after
+  resolution and renderability validation but before scroll snapshot or history
+  writes. In registration order, only `false` cancels; `void` permits navigation.
+  Cancellation leaves URL/history state, outlet, metadata, active links, route
+  event, and scroll untouched. An intercepted click does not fall back to native
+  navigation; `navigate()` and `navigateByName()` still return `void`.
+- After hooks receive the same routes and a reason of `load`, `navigate`, or
+  `popstate`. They run after the existing route-change event on successful
+  rendering but before deferred scroll work. Startup and browser traversal have
+  no cancellable before phase because the browser location has already changed.
+  Pure resolution and href helpers do not dispatch hooks.
+- Hook callbacks are synchronous. Promise-like results are errors, not pending
+  decisions. Before errors propagate without navigation side effects; after
+  errors propagate after the route and event are committed, stop subsequent
+  hooks for that dispatch, and never roll back navigation. A newly registered
+  hook joins the next dispatch, while unsubscribe takes effect immediately and
+  is idempotent. Nested navigation inside a hook throws before the nested
+  attempt has side effects; event-listener navigation can supersede an older
+  route's pending after dispatch. `destroy()` clears all hooks; a later
+  `init()` requires registering them again.
 - Scroll positions are tracked by router history key in memory and persisted on
   the active browser history entry so restoration can survive a reload or new
   router runtime instance.
@@ -81,7 +105,9 @@ link-matching behavior, event naming, and scroll behavior.
 
 ## Constraints
 
-- Route records are immutable inputs and must not be mutated.
+- Route records are immutable inputs and must not be mutated. Hooks observe
+  resolved routes without rewriting them or their records; this does not
+  introduce deep freezing.
 - Flat and nested route definitions must both be supported.
 - Named routes must be unique.
 - Base-path handling must support both root deployment and subpath deployment.
@@ -141,5 +167,8 @@ link-matching behavior, event naming, and scroll behavior.
 - Excluded links do not receive active-state attributes.
 - Anchor navigation, persisted history traversal, and fresh link navigation
   produce the documented scroll behavior.
+- Hook ordering, cancellation, unsubscribe, teardown, error boundaries,
+  redirected targets, and load/popstate observation are verified without
+  changing navigation for consumers that do not register hooks.
 - A tarball produced from the package can be installed into a clean temporary
   consumer and imported through the published ESM entrypoint.
