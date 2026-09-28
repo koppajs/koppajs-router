@@ -12,12 +12,15 @@ not every internal refactor.
 
 ## [Unreleased]
 
-This section is intentionally empty.
-Changes will only appear here when they:
+No unreleased changes.
 
-- affect repository behavior or public guidance,
-- change contributor workflow or governance,
-- or alter the documented package or repository contract.
+---
+
+## 0.1.6
+
+- add synchronous, per-instance before-navigation cancellation and after-render
+  observation hooks with typed route contexts, idempotent unsubscribe, and
+  lifecycle cleanup while preserving existing route-change events
 
 ---
 

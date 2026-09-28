@@ -19,9 +19,10 @@ package adopts decisions from a broader KoppaJS workspace.
 
 ## Package-Local ADR Index
 
-| ADR                                                                             | Topic                    | Why it matters                                                                                                     |
-| ------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| [ADR-0001](./docs/adr/0001-generic-runtime-and-consumer-owned-route-content.md) | Generic runtime boundary | Captures the package's core responsibility split between reusable router runtime and consumer-owned route content. |
+| ADR                                                                             | Topic                    | Why it matters                                                                                                       |
+| ------------------------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| [ADR-0001](./docs/adr/0001-generic-runtime-and-consumer-owned-route-content.md) | Generic runtime boundary | Captures the package's core responsibility split between reusable router runtime and consumer-owned route content.   |
+| [ADR-0002](./docs/adr/0002-synchronous-navigation-hooks.md)                     | Navigation hooks         | Keeps synchronous cancellation and post-render observation at the runtime boundary without changing existing events. |
 
 ## Adopted External Decisions
 

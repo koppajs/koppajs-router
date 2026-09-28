@@ -51,6 +51,7 @@ Allowed dependencies:
 - history state and scroll-position bookkeeping
 - outlet rendering
 - route-change event dispatch
+- synchronous before/after hook dispatch and per-instance cleanup
 - `init()` and `destroy()` lifecycle management
 
 Allowed dependencies:

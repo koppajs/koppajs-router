@@ -86,6 +86,27 @@ export type NavigateByNameOptions = ResolveNamedRouteOptions & {
   scroll?: boolean;
 };
 
+export type RouteNavigationReason = "load" | "navigate" | "popstate";
+
+export type RouteNavigationContext<TRoute extends RouteDefinition = RouteDefinition> = Readonly<{
+  from: Readonly<ResolvedRoute<TRoute>> | null;
+  to: Readonly<ResolvedRoute<TRoute>>;
+  reason: RouteNavigationReason;
+}>;
+
+export type RouteBeforeNavigateContext<TRoute extends RouteDefinition = RouteDefinition> = Omit<
+  RouteNavigationContext<TRoute>,
+  "reason"
+> & { readonly reason: "navigate" };
+
+export type RouteBeforeNavigateHook<TRoute extends RouteDefinition = RouteDefinition> = (
+  context: RouteBeforeNavigateContext<TRoute>,
+) => boolean | void;
+
+export type RouteAfterNavigateHook<TRoute extends RouteDefinition = RouteDefinition> = (
+  context: RouteNavigationContext<TRoute>,
+) => void;
+
 export type RouteChangeDetail<TRoute extends RouteDefinition = RouteDefinition> = {
   path: string;
   fullPath: string;
@@ -166,7 +187,7 @@ type ScrollRestoreOptions = {
   shouldContinue?: () => boolean;
 };
 
-type RenderReason = "load" | "navigate" | "popstate";
+type RenderReason = RouteNavigationReason;
 
 const isNamedRouteTarget = (target: RouteTarget): target is NamedRouteTarget =>
   typeof target === "object" && target !== null && "name" in target;
@@ -1025,6 +1046,14 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
 
   private scrollRestoreVersion = 0;
 
+  private readonly beforeNavigateHooks = new Set<{ callback: RouteBeforeNavigateHook<TRoute> }>();
+
+  private readonly afterNavigateHooks = new Set<{ callback: RouteAfterNavigateHook<TRoute> }>();
+
+  private dispatchingHook = false;
+
+  private hookGeneration = 0;
+
   constructor(private readonly options: KoppajsRouterOptions<TRoute>) {
     if (options.routes.length === 0) {
       throw new Error("KoppajsRouter requires at least one route.");
@@ -1068,7 +1097,28 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
 
     this.pendingPopState = null;
     this.scrollRestoreVersion += 1;
+    this.hookGeneration += 1;
+    this.beforeNavigateHooks.clear();
+    this.afterNavigateHooks.clear();
     this.restoreScrollRestoration();
+  }
+
+  onBeforeNavigate(callback: RouteBeforeNavigateHook<TRoute>): () => void {
+    const subscription = { callback };
+    this.beforeNavigateHooks.add(subscription);
+    return () => {
+      this.beforeNavigateHooks.delete(subscription);
+    };
+  }
+
+  onAfterNavigate<TResult extends void>(
+    callback: (context: RouteNavigationContext<TRoute>) => TResult,
+  ): () => void {
+    const subscription = { callback };
+    this.afterNavigateHooks.add(subscription);
+    return () => {
+      this.afterNavigateHooks.delete(subscription);
+    };
   }
 
   navigate(path: string, options?: NavigateOptions): void;
@@ -1077,6 +1127,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     target: RouteTarget,
     options: NavigateOptions | Pick<NavigateOptions, "replace" | "scroll"> = {},
   ): void {
+    this.assertNotDispatchingHook();
     const resolveOptions: ResolvePathOptions = {
       query: "query" in options ? options.query : undefined,
       hash: "hash" in options ? options.hash : undefined,
@@ -1088,6 +1139,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
   }
 
   navigateByName(name: string, options: NavigateByNameOptions = {}): void {
+    this.assertNotDispatchingHook();
     const resolvedRoute = this.resolveByName(name, options);
     this.navigateToResolvedRoute(resolvedRoute, options);
   }
@@ -1210,10 +1262,85 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     this.renderResolvedRoute(resolvedRoute, reason, scroll);
   }
 
+  private assertNotDispatchingHook(): void {
+    if (this.dispatchingHook) {
+      throw new Error("KoppajsRouter cannot navigate inside a navigation hook.");
+    }
+  }
+
+  private callHook<TContext, TResult>(
+    callback: (context: TContext) => TResult,
+    context: TContext,
+    phase: "before" | "after",
+  ): TResult {
+    this.dispatchingHook = true;
+    try {
+      const result = callback(context);
+      if ((typeof result === "object" && result !== null) || typeof result === "function") {
+        const thenable = result as { then?: unknown };
+        if (typeof thenable.then === "function") {
+          throw new TypeError(`KoppajsRouter ${phase} navigation hooks must be synchronous.`);
+        }
+      }
+      return result;
+    } finally {
+      this.dispatchingHook = false;
+    }
+  }
+
+  private runBeforeNavigateHooks(route: ResolvedRoute<TRoute>): boolean {
+    const generation = this.hookGeneration;
+    const context: RouteBeforeNavigateContext<TRoute> = {
+      from: this.currentRoute,
+      to: route,
+      reason: "navigate",
+    };
+    for (const subscription of [...this.beforeNavigateHooks]) {
+      if (!this.beforeNavigateHooks.has(subscription)) {
+        continue;
+      }
+      const result = this.callHook(subscription.callback, context, "before");
+      if (result === false || generation !== this.hookGeneration) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private runAfterNavigateHooks(
+    from: ResolvedRoute<TRoute> | null,
+    to: ResolvedRoute<TRoute>,
+    reason: RenderReason,
+    version: number,
+    generation: number,
+  ): void {
+    const context: RouteNavigationContext<TRoute> = { from, to, reason };
+    for (const subscription of [...this.afterNavigateHooks]) {
+      if (
+        version !== this.scrollRestoreVersion ||
+        generation !== this.hookGeneration ||
+        this.currentRoute !== to
+      ) {
+        return;
+      }
+      if (this.afterNavigateHooks.has(subscription)) {
+        this.callHook(subscription.callback, context, "after");
+      }
+    }
+  }
+
   private navigateToResolvedRoute(
     resolvedRoute: ResolvedRoute<TRoute>,
     options: Pick<NavigateOptions, "replace" | "scroll">,
   ): void {
+    if (!isRenderableRoute(resolvedRoute)) {
+      throw new Error(
+        `KoppajsRouter cannot render route "${resolvedRoute.pattern}" because title, description, and componentTag are required on the final resolved route.`,
+      );
+    }
+    if (!this.runBeforeNavigateHooks(resolvedRoute)) {
+      return;
+    }
     this.saveScrollPosition(this.currentHistoryKey, true);
 
     const currentFullPath = this.getLocationTarget().fullPath;
@@ -1398,6 +1525,8 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
       );
     }
 
+    const previousRoute = this.currentRoute;
+    const hookGeneration = this.hookGeneration;
     this.options.outlet.innerHTML = `<${route.componentTag}></${route.componentTag}>`;
     this.documentRef.title = route.title;
     setDocumentDescription(this.documentRef, route.description);
@@ -1424,6 +1553,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
 
       this.applyScroll(route, reason, shouldScroll, scrollRestoreVersion);
     });
+    this.runAfterNavigateHooks(previousRoute, route, reason, scrollRestoreVersion, hookGeneration);
   }
 
   private applyScroll(
