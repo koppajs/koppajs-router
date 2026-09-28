@@ -151,6 +151,13 @@ if (typeof KoppajsRouter !== "function") {
   throw new Error("KoppajsRouter export is missing from the published package.");
 }
 
+if (
+  typeof KoppajsRouter.prototype.onBeforeNavigate !== "function" ||
+  typeof KoppajsRouter.prototype.onAfterNavigate !== "function"
+) {
+  throw new Error("Navigation hook methods are missing from the published package.");
+}
+
 if (DEFAULT_ROUTE_CHANGE_EVENT_NAME !== "koppajs-route-change") {
   throw new Error("DEFAULT_ROUTE_CHANGE_EVENT_NAME export is not stable.");
 }
