@@ -16,6 +16,16 @@ No unreleased changes.
 
 ---
 
+## 0.1.7
+
+- add optional typed `isLinkActive(link, currentRoute)` rules shared by initial,
+  navigation, history, and mutation-triggered active-link synchronization while
+  preserving path-based matching by default
+- invalidate queued active-link synchronization on teardown and document the
+  boundary between synchronous navigation hooks and later DOM synchronization
+
+---
+
 ## 0.1.6
 
 - add synchronous, per-instance before-navigation cancellation and after-render

@@ -34,7 +34,7 @@ link-matching behavior, event naming, and scroll behavior.
 - router options including `outlet`, optional `root`, optional `document`,
   optional `window`, optional `basePath`, optional `routeChangeEventName`,
   optional `scrollBehavior`, and active-link options such as selector,
-  class/attribute names, and `shouldSetActiveState`
+  class/attribute names, `shouldSetActiveState`, and `isLinkActive`
 
 ## Outputs
 
@@ -114,7 +114,24 @@ link-matching behavior, event naming, and scroll behavior.
 - Static route segments must outrank dynamic `:param` segments, and dynamic
   segments must outrank wildcard `*` segments when multiple routes match the
   same path.
-- Active-link matching is based on normalized route path only.
+- Without `isLinkActive`, active-link matching is based on normalized route path
+  only (query and hash are ignored). With `isLinkActive(link, currentRoute)`, its
+  synchronous boolean result replaces path matching. The callback observes the
+  current read-only resolved route, including metadata, query, and hash, on every
+  synchronous and mutation-triggered sync. `shouldSetActiveState` takes priority:
+  excluded links are cleared without invoking the matcher. Matching must be
+  side-effect free; it does not change navigation or route resolution.
+- `setActiveRouteLinks` accepts either the legacy path string for default matching
+  or a resolved route for custom matching. A custom matcher requires a resolved
+  route; supplying only a path with a matcher throws a clear error.
+- Route-change events and after hooks run after synchronous link synchronization,
+  not after all future DOM mutations. Added or removed route links schedule a
+  microtask that re-evaluates all selected links using the latest committed route
+  and the same matching rule. Attribute-only changes and native hash changes do
+  not trigger this observer; custom matching is not scrollspy.
+- `destroy()` invalidates queued active-link microtasks as well as disconnecting
+  the observer. A subsequent `init()` starts a fresh synchronization lifecycle;
+  old work must neither mutate links nor clear a new lifecycle's pending sync.
 - Redirect resolution must stop with an error if it exceeds the redirect-depth
   limit.
 - Unmatched paths must not silently fall back to the first route. They must
@@ -164,7 +181,12 @@ link-matching behavior, event naming, and scroll behavior.
   changing route resolution.
 - Custom active-link selector, class, and attribute options affect link syncing
   without changing route resolution.
-- Excluded links do not receive active-state attributes.
+- Excluded links do not receive active-state attributes or invoke custom matching.
+- Custom matching replaces rather than augments path matching and receives the
+  current typed resolved route on load, navigation, history traversal, and link
+  mutations. Default matching remains path-only.
+- Queued link synchronization is invalidated on teardown and remains usable
+  after reinitialization; later route changes supersede queued route context.
 - Anchor navigation, persisted history traversal, and fresh link navigation
   produce the documented scroll behavior.
 - Hook ordering, cancellation, unsubscribe, teardown, error boundaries,

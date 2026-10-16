@@ -11,6 +11,7 @@ import {
   type RouteChangeDetail,
   type RouteDefinition,
   type RouteNavigationContext,
+  type ResolvedRoute,
 } from "../../src/index";
 
 type TestRoute = RouteDefinition<{
@@ -358,6 +359,7 @@ describe("koppajs-router", () => {
     expect(() => router.init()).toThrow(
       'KoppajsRouter could not match path "/missing". Add a "*" route to handle unmatched paths.',
     );
+    router.destroy();
   });
 
   it("navigates by name, updates document metadata, and emits a rich route-change event", async () => {
@@ -472,6 +474,7 @@ describe("koppajs-router", () => {
     await flushRouterWork();
     expect(window.location.pathname).toBe("/contact");
     expect(window.location.hash).toBe("#contact-form");
+    router.destroy();
   });
 
   it("applies explicit event, scroll, and active-link options without changing route resolution", async () => {
@@ -540,6 +543,7 @@ describe("koppajs-router", () => {
         .querySelector<HTMLAnchorElement>('a[data-nav][href="/"]')
         ?.classList.contains("nav-link--active"),
     ).toBe(false);
+    router.destroy();
   });
 
   it("renders an explicit wildcard route when the current location is unmatched", async () => {
@@ -579,6 +583,7 @@ describe("koppajs-router", () => {
     expect(router.getCurrentRoute().pattern).toBe("/*");
     expect(router.getCurrentRoute().path).toBe("/missing");
     expect(router.getCurrentRoute().fullPath).toBe("/missing?ref=nav#not-found-page");
+    router.destroy();
   });
 
   it("keeps excluded links out of the active-state contract and matches links by path only", () => {
@@ -605,6 +610,186 @@ describe("koppajs-router", () => {
       document.querySelector<HTMLAnchorElement>("a.nav-link--cta")?.hasAttribute("aria-current"),
     ).toBe(false);
   });
+
+  it("uses custom matching with a resolved route and preserves exclusion priority", () => {
+    document.body.innerHTML = `
+      <a id="selected" data-route="/services">Section</a>
+      <a id="exact" data-route="/contact">Contact</a>
+      <a id="excluded" data-route="/contact" class="is-active" aria-current="page">CTA</a>
+    `;
+    const route = resolveRoute(routes, "/contact?tab=team#about");
+    const matcher = vi.fn(
+      (link: HTMLAnchorElement, currentRoute: Readonly<ResolvedRoute<TestRoute>>) => {
+        expect(currentRoute).toBe(route);
+        return link.id === "selected" && currentRoute.hash === "#about";
+      },
+    );
+    setActiveRouteLinks(document, route, {
+      isLinkActive: matcher,
+      shouldSetActiveState: (link) => link.id !== "excluded",
+    });
+    expect(matcher).toHaveBeenCalledTimes(2);
+    expect(document.querySelector("#selected")?.getAttribute("aria-current")).toBe("page");
+    expect(document.querySelector("#exact")?.classList.contains("is-active")).toBe(false);
+    expect(document.querySelector("#excluded")?.hasAttribute("aria-current")).toBe(false);
+    expect(document.querySelector("#excluded")?.classList.contains("is-active")).toBe(false);
+  });
+
+  it("rejects custom matching without a resolved route", () => {
+    expect(() => {
+      setActiveRouteLinks(document, "/contact", { isLinkActive: () => true });
+    }).toThrow("resolved route");
+  });
+
+  it("keeps custom matching consistent across load, navigation, history, and late links", async () => {
+    installScrollState();
+    const root = document.createElement("section");
+    root.innerHTML = `
+      <a id="custom" data-route="/services">About</a>
+      <a id="exact" data-route="/contact">Contact</a>
+      <main id="outlet"></main>
+    `;
+    window.history.replaceState({}, "", "/preview/contact?tab=team#about");
+    const matcher = vi.fn(
+      (link: HTMLAnchorElement, route: Readonly<ResolvedRoute<TestRoute>>) =>
+        link.id !== "exact" && route.hash === "#about" && route.meta?.section === "contact",
+    );
+    const router = new KoppajsRouter({
+      routes,
+      root,
+      outlet: root.querySelector<HTMLElement>("main")!,
+      basePath: "/preview/",
+      isLinkActive: matcher,
+      activeClassName: "selected",
+      activeAttributeName: "data-current",
+    });
+    const expectSelected = (id: string, active: boolean) => {
+      expect(root.querySelector(`#${id}`)?.classList.contains("selected")).toBe(active);
+      expect(root.querySelector(`#${id}`)?.getAttribute("data-current")).toBe(
+        active ? "page" : null,
+      );
+    };
+    const after = vi.fn(() => expectSelected("custom", router.getCurrentRoute().hash === "#about"));
+    router.onAfterNavigate(after);
+    router.init();
+    expectSelected("custom", true);
+    expectSelected("exact", false);
+    const initialState: unknown = window.history.state;
+    root.insertAdjacentHTML("beforeend", '<a id="late" data-route="/">Late</a>');
+    await flushRouterWork();
+    expectSelected("late", true);
+    expectSelected("custom", true);
+    router.navigate("/contact#other", { scroll: false });
+    expectSelected("custom", false);
+    expectSelected("late", false);
+    router.navigateByName("contact", { hash: "about", scroll: false });
+    expectSelected("custom", true);
+    expectSelected("late", true);
+    router.navigate("/services", { scroll: false });
+    window.history.replaceState(initialState, "", "/preview/contact?tab=team#about");
+    window.dispatchEvent(new PopStateEvent("popstate", { state: initialState }));
+    expectSelected("custom", true);
+    root.querySelector("#late")?.remove();
+    await flushRouterWork();
+    expectSelected("custom", true);
+    expect(matcher).toHaveBeenLastCalledWith(
+      expect.any(HTMLAnchorElement),
+      router.getCurrentRoute(),
+    );
+    expect(after).toHaveBeenCalledTimes(5);
+    router.destroy();
+  });
+
+  it("uses the latest route when a queued link sync follows another navigation", async () => {
+    installScrollState();
+    const root = document.createElement("section");
+    root.innerHTML = "<main></main>";
+    const observedRoutes: string[] = [];
+    const router = new KoppajsRouter({
+      routes,
+      root,
+      outlet: root.querySelector("main")!,
+      isLinkActive: (link, route) => {
+        observedRoutes.push(route.fullPath);
+        return link.dataset.route === route.path;
+      },
+    });
+    router.init();
+    root.insertAdjacentHTML("beforeend", '<a data-route="/contact">Contact</a>');
+    await Promise.resolve();
+    router.navigate("/contact?tab=team", { scroll: false });
+    observedRoutes.length = 0;
+    await flushRouterWork();
+    expect(observedRoutes).toEqual(["/contact?tab=team"]);
+    expect(root.querySelector("a")?.getAttribute("aria-current")).toBe("page");
+    router.destroy();
+  });
+
+  it("preserves default matching with resolved routes and propagates matcher errors", () => {
+    const root = document.createElement("section");
+    root.innerHTML = '<a data-route="/contact?tab=other#one">Contact</a>';
+    const route = resolveRoute(routes, "/contact?tab=team#two");
+    setActiveRouteLinks(root, route);
+    expect(root.querySelector("a")?.getAttribute("aria-current")).toBe("page");
+    expect(() =>
+      setActiveRouteLinks(root, route, {
+        isLinkActive: () => {
+          throw new Error("Matching failed");
+        },
+      }),
+    ).toThrow("Matching failed");
+  });
+
+  it("rechecks manual after-hook state on link mutations using the current path", async () => {
+    installScrollState();
+    const root = document.createElement("section");
+    root.innerHTML = `
+      <a id="exact" data-route="/contact#one">Contact</a>
+      <a id="manual" data-route="/services">Manual</a>
+      <main></main>
+    `;
+    const router = new KoppajsRouter({ routes, root, outlet: root.querySelector("main")! });
+    router.onAfterNavigate(() => root.querySelector("#manual")!.classList.add("is-active"));
+    router.init();
+    router.navigate("/contact?tab=team#two", { scroll: false });
+    expect(root.querySelector("#manual")?.classList.contains("is-active")).toBe(true);
+    root.insertAdjacentHTML("beforeend", '<a data-route="/">Late</a>');
+    await flushRouterWork();
+    expect(root.querySelector("#manual")?.classList.contains("is-active")).toBe(false);
+    expect(root.querySelector("#exact")?.getAttribute("aria-current")).toBe("page");
+    router.destroy();
+  });
+
+  it.each([false, true])(
+    "invalidates queued link syncing on destroy (reinit: %s)",
+    async (reinit) => {
+      installScrollState();
+      const root = document.createElement("section");
+      root.innerHTML = "<main></main>";
+      const matcher = vi.fn(() => true);
+      const router = new KoppajsRouter({
+        routes,
+        root,
+        outlet: root.querySelector("main")!,
+        isLinkActive: matcher,
+      });
+      router.init();
+      root.insertAdjacentHTML("beforeend", '<a id="late" data-route="/">Late</a>');
+      await Promise.resolve(); // Deliver the observer, leaving its sync microtask queued.
+      router.destroy();
+      if (reinit) router.init();
+      matcher.mockClear();
+      await flushRouterWork();
+      expect(matcher).not.toHaveBeenCalled();
+      expect(root.querySelector("#late")?.hasAttribute("aria-current")).toBe(reinit);
+      if (reinit) {
+        root.insertAdjacentHTML("beforeend", '<a id="fresh" data-route="/">Fresh</a>');
+        await flushRouterWork();
+        expect(root.querySelector("#fresh")?.getAttribute("aria-current")).toBe("page");
+      }
+      router.destroy();
+    },
+  );
 
   it("syncs active links when route links render after router init", async () => {
     window.history.replaceState({}, "", "/services");
