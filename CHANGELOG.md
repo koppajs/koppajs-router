@@ -12,6 +12,12 @@ not every internal refactor.
 
 ## [Unreleased]
 
+No unreleased changes.
+
+---
+
+## 0.1.7
+
 - add optional typed `isLinkActive(link, currentRoute)` rules shared by initial,
   navigation, history, and mutation-triggered active-link synchronization while
   preserving path-based matching by default
