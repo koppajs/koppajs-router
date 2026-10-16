@@ -23,6 +23,7 @@ package adopts decisions from a broader KoppaJS workspace.
 | ------------------------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | [ADR-0001](./docs/adr/0001-generic-runtime-and-consumer-owned-route-content.md) | Generic runtime boundary | Captures the package's core responsibility split between reusable router runtime and consumer-owned route content.   |
 | [ADR-0002](./docs/adr/0002-synchronous-navigation-hooks.md)                     | Navigation hooks         | Keeps synchronous cancellation and post-render observation at the runtime boundary without changing existing events. |
+| [ADR-0003](./docs/adr/0003-custom-active-link-matching.md)                      | Active-link matching     | Keeps custom matching consumer-owned while synchronization and lifecycle safety stay in the router.                  |
 
 ## Adopted External Decisions
 

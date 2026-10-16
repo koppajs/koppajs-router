@@ -12,7 +12,11 @@ not every internal refactor.
 
 ## [Unreleased]
 
-No unreleased changes.
+- add optional typed `isLinkActive(link, currentRoute)` rules shared by initial,
+  navigation, history, and mutation-triggered active-link synchronization while
+  preserving path-based matching by default
+- invalidate queued active-link synchronization on teardown and document the
+  boundary between synchronous navigation hooks and later DOM synchronization
 
 ---
 

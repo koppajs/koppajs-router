@@ -115,17 +115,21 @@ export type RouteChangeDetail<TRoute extends RouteDefinition = RouteDefinition> 
   route: ResolvedRoute<TRoute>;
 };
 
-export type ActiveRouteLinkOptions = {
+export type ActiveRouteLinkOptions<TRoute extends RouteDefinition = RouteDefinition> = {
   linkSelector?: string;
   activeClassName?: string;
   activeAttributeName?: string;
   shouldSetActiveState?: (link: HTMLAnchorElement) => boolean;
+  isLinkActive?: (
+    link: HTMLAnchorElement,
+    currentRoute: Readonly<ResolvedRoute<TRoute>>,
+  ) => boolean;
 };
 
 export type RouterRoot = Document | DocumentFragment | HTMLElement;
 
 export type KoppajsRouterOptions<TRoute extends RouteDefinition = RouteDefinition> =
-  ActiveRouteLinkOptions & {
+  ActiveRouteLinkOptions<TRoute> & {
     routes: readonly TRoute[];
     outlet: HTMLElement;
     root?: RouterRoot;
@@ -850,15 +854,32 @@ const asElementFromTarget = (target: EventTarget): Element => target as Element;
 
 const extractLinkPath = (target: string): string => parseRouteTarget(target).path;
 
-export const setActiveRouteLinks = (
+export function setActiveRouteLinks<TRoute extends RouteDefinition = RouteDefinition>(
   root: ParentNode,
   activePath: string,
-  options: ActiveRouteLinkOptions = {},
-): void => {
+  options?: ActiveRouteLinkOptions<TRoute>,
+): void;
+export function setActiveRouteLinks<TRoute extends RouteDefinition>(
+  root: ParentNode,
+  activeRoute: Readonly<ResolvedRoute<TRoute>>,
+  options?: ActiveRouteLinkOptions<TRoute>,
+): void;
+export function setActiveRouteLinks<TRoute extends RouteDefinition>(
+  root: ParentNode,
+  activeRoute: string | Readonly<ResolvedRoute<TRoute>>,
+  options: ActiveRouteLinkOptions<TRoute> = {},
+): void {
+  if (typeof activeRoute === "string" && options.isLinkActive) {
+    throw new Error(
+      "KoppajsRouter custom link matching requires a resolved route, not a path string.",
+    );
+  }
   const selector = options.linkSelector ?? DEFAULT_ROUTE_LINK_SELECTOR;
   const activeClassName = options.activeClassName ?? DEFAULT_ACTIVE_CLASS_NAME;
   const activeAttributeName = options.activeAttributeName ?? DEFAULT_ACTIVE_ATTRIBUTE_NAME;
-  const normalizedActivePath = normalizePath(activePath);
+  const normalizedActivePath = normalizePath(
+    typeof activeRoute === "string" ? activeRoute : activeRoute.path,
+  );
 
   root.querySelectorAll<HTMLAnchorElement>(selector).forEach((link) => {
     const shouldSetActiveState = options.shouldSetActiveState?.(link) ?? true;
@@ -870,7 +891,10 @@ export const setActiveRouteLinks = (
     }
 
     const routeTarget = link.dataset.route ?? link.getAttribute("href") ?? "/";
-    const isActive = extractLinkPath(routeTarget) === normalizedActivePath;
+    const isActive =
+      options.isLinkActive && typeof activeRoute !== "string"
+        ? options.isLinkActive(link, activeRoute)
+        : extractLinkPath(routeTarget) === normalizedActivePath;
 
     link.classList.toggle(activeClassName, isActive);
 
@@ -880,7 +904,7 @@ export const setActiveRouteLinks = (
       link.removeAttribute(activeAttributeName);
     }
   });
-};
+}
 
 const waitForNextPaint = (windowRef: Window, callback: () => void): void => {
   if (typeof windowRef.requestAnimationFrame !== "function") {
@@ -1018,6 +1042,8 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
 
   private navSyncScheduled = false;
 
+  private navSyncGeneration = 0;
+
   private readonly root: RouterRoot;
 
   private readonly documentRef: Document;
@@ -1030,7 +1056,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
 
   private readonly scrollBehavior: ScrollBehavior;
 
-  private readonly activeRouteLinkOptions: ActiveRouteLinkOptions;
+  private readonly activeRouteLinkOptions: ActiveRouteLinkOptions<TRoute>;
 
   private readonly routeRegistry: RouteRegistry<TRoute>;
 
@@ -1070,6 +1096,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
       activeClassName: options.activeClassName,
       activeAttributeName: options.activeAttributeName,
       shouldSetActiveState: options.shouldSetActiveState,
+      isLinkActive: options.isLinkActive,
     };
     this.routeRegistry = buildRouteRegistry(options.routes);
   }
@@ -1095,6 +1122,8 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
       this.navObserver = null;
     }
 
+    this.navSyncGeneration += 1;
+    this.navSyncScheduled = false;
     this.pendingPopState = null;
     this.scrollRestoreVersion += 1;
     this.hookGeneration += 1;
@@ -1508,9 +1537,15 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     }
 
     this.navSyncScheduled = true;
+    const generation = this.navSyncGeneration;
     queueMicrotask(() => {
+      if (generation !== this.navSyncGeneration) {
+        return;
+      }
       this.navSyncScheduled = false;
-      setActiveRouteLinks(this.root, this.getCurrentPath(), this.activeRouteLinkOptions);
+      if (this.currentRoute) {
+        setActiveRouteLinks(this.root, this.currentRoute, this.activeRouteLinkOptions);
+      }
     });
   }
 
@@ -1531,7 +1566,7 @@ export class KoppajsRouter<TRoute extends RouteDefinition = RouteDefinition> {
     this.documentRef.title = route.title;
     setDocumentDescription(this.documentRef, route.description);
     this.currentRoute = route;
-    setActiveRouteLinks(this.root, route.path, this.activeRouteLinkOptions);
+    setActiveRouteLinks(this.root, route, this.activeRouteLinkOptions);
     this.scrollRestoreVersion += 1;
     const scrollRestoreVersion = this.scrollRestoreVersion;
     this.windowRef.dispatchEvent(

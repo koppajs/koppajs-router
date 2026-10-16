@@ -38,7 +38,7 @@ configuration surface also includes:
 - optional `routeChangeEventName` to override the default emitted browser event
 - optional `scrollBehavior` for non-anchor forward navigation
 - optional active-link controls such as `linkSelector`, `activeClassName`,
-  `activeAttributeName`, and `shouldSetActiveState`
+  `activeAttributeName`, `shouldSetActiveState`, and `isLinkActive`
 
 These options are part of the public runtime contract and must stay documented
 when they change.
@@ -136,7 +136,14 @@ On teardown:
 - Base-path translation must work for root deployments and subpath deployments.
 - Static route segments outrank dynamic segments, and dynamic segments outrank
   wildcard catch-all segments during matching.
-- Active links are matched by normalized route path only, not by query or hash.
+- Active links default to normalized path matching, ignoring query and hash.
+  Optional synchronous `isLinkActive(link, currentRoute)` replaces only the
+  matching decision, after `shouldSetActiveState` eligibility. Both render-time
+  and mutation-triggered updates flow through `setActiveRouteLinks` with the
+  latest resolved route; consumer rules do not own the DOM writes.
+- Route-change events and after hooks precede possible future mutation syncs.
+  Active-link microtasks carry a lifecycle generation that `destroy()` invalidates
+  before a subsequent `init()` can schedule new work.
 - Route records are input data and must never be mutated during matching or
   navigation.
 - Unmatched paths never silently fall back to the first route. They either hit

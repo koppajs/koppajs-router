@@ -147,7 +147,8 @@ Contract constraints:
 - unmatched paths throw unless the consumer declares an explicit `path: "*"`
   route
 - static segments outrank dynamic segments, and dynamic segments outrank `*`
-- active-link matching is path-based and ignores query and hash state
+- active-link matching defaults to path-based comparison ignoring query and hash;
+  optional `isLinkActive` replaces that comparison with a consumer-owned rule
 - route records are treated as immutable input data
 
 ---
@@ -351,6 +352,7 @@ Active-link options:
 - `activeClassName`
 - `activeAttributeName`
 - `shouldSetActiveState`
+- `isLinkActive(link, currentRoute)`
 
 Important nuance:
 
@@ -359,6 +361,56 @@ Important nuance:
   present and otherwise fall back to `href`
 - if you want href-only links to participate in delegated handling, provide a
   selector such as `a[data-nav]` or `a[href^="/"]` explicitly
+
+### Custom active-link matching
+
+Without `isLinkActive`, links keep the existing normalized path comparison,
+ignoring query and hash. Supply a synchronous boolean callback to replace that
+comparison for every eligible link:
+
+```ts
+const router = new KoppajsRouter({
+  routes,
+  outlet,
+  isLinkActive: (link, currentRoute) => {
+    const target = new URL(
+      link.dataset.route ?? link.getAttribute("href") ?? "/",
+      window.location.origin,
+    );
+    return target.pathname === currentRoute.path && target.hash === currentRoute.hash;
+  },
+});
+```
+
+This example expects app-relative `data-route` paths (without the deployment
+base path). `currentRoute` is the read-only resolved app route with typed
+metadata, params, query, and hash. Return `true` for active and `false` for
+inactive; `false` does not fall back to default matching. Do not mutate DOM or
+route state, navigate, or return a Promise from the callback. Matcher errors are
+not swallowed: synchronous sync errors propagate to the caller, while deferred
+sync errors surface through the microtask. Matching is not transactional and
+does not roll back an already committed navigation.
+
+`shouldSetActiveState` remains the eligibility gate: excluded links have the
+configured active class and attribute removed and never reach `isLinkActive`.
+The router still owns those DOM writes; custom matching only supplies the rule.
+
+The same rule runs synchronously before the route-change event and after hooks,
+and again in a microtask when route links are added or removed. Each deferred
+sync uses the latest committed route. After hooks are **not** a final DOM-settled
+notification: manually overriding the same active class or attribute can be
+undone by a later sync. Put durable custom rules in `isLinkActive` instead of a
+timeout or an after-hook class override.
+
+Attribute-only edits, native `hashchange`, and scrolling do not trigger this
+observer. For hash-sensitive rules, navigate through the router; this option
+does not implement scrollspy. `destroy()` disconnects observation and invalidates
+already queued link work, including across a subsequent `init()`.
+
+For standalone use, `setActiveRouteLinks(root, path, options)` keeps supporting
+default matching. For custom matching, pass the resolved route instead:
+`setActiveRouteLinks(root, router.getCurrentRoute(), { isLinkActive })`. A custom
+matcher with only a path string throws because the route context is missing.
 
 ---
 
