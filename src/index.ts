@@ -5,10 +5,7 @@ export type RouteParamsInput = Readonly<Record<string, PrimitiveRouteValue>>;
 export type RouteParams = Readonly<Record<string, string>>;
 
 export type RouteQueryInputValue =
-  | PrimitiveRouteValue
-  | null
-  | undefined
-  | readonly (PrimitiveRouteValue | null | undefined)[];
+  PrimitiveRouteValue | null | undefined | readonly (PrimitiveRouteValue | null | undefined)[];
 
 export type RouteQueryInput = Readonly<Record<string, RouteQueryInputValue>>;
 
@@ -1016,11 +1013,7 @@ const getAnchorElement = (documentRef: Document, hash: string): HTMLElement | nu
     return null;
   }
 
-  return (
-    documentRef.getElementById(anchorId) ??
-    (documentRef.getElementsByName(anchorId)[0] as HTMLElement | undefined) ??
-    null
-  );
+  return documentRef.getElementById(anchorId) ?? documentRef.getElementsByName(anchorId)[0] ?? null;
 };
 
 const isRenderableRoute = (

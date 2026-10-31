@@ -26,6 +26,15 @@ seams, without overfitting to implementation details.
   the repository adds a demo app or package-local browser harness. Otherwise,
   consumer applications should validate browser-specific integration.
 
+## Ecosystem Compatibility
+
+`tests/unit/ecosystem.test.ts` builds a real `.kpa` fixture through the published
+Vite plugin and Vite, then registers the output with published Core and mounts it
+through the router in jsdom. It covers TypeScript imports, SCSS, asynchronous
+rendering, delegated navigation, subpath URLs, metadata, active links, and
+component replacement/remount. Vite runs in a Node subprocess to keep native
+Node typed arrays separate from jsdom. These packages are development-only.
+
 ## What We Deliberately Do Not Use
 
 - No Playwright today: this repository is a reusable router package, not a

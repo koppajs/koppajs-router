@@ -164,6 +164,16 @@ link-matching behavior, event naming, and scroll behavior.
 - New router-created history entries must not inherit a previous entry's
   persisted scroll position.
 
+## Ecosystem Compatibility
+
+- The runtime stays independent of Core, the Vite plugin, and Vite.
+- Development-only compatibility coverage uses published Core 3.0.11, Vite
+  plugin 2.0.0, and Vite 8.3.5 (locked through the package lockfile).
+- A real `.kpa` component must compile through the plugin and mount through
+  Core when the router inserts its registered custom element into the outlet.
+- Navigation must preserve subpath URLs, metadata, active links, and component
+  teardown/remount across that integration.
+
 ## Acceptance Criteria
 
 - `toHref` and `fromLocationPathname` correctly translate root and subpath URLs.

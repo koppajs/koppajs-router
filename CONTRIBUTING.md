@@ -69,8 +69,9 @@ The local pre-commit hook runs the same guard and blocks the commit when the con
 
 ## Requirements
 
-- Node.js >= 22
-- pnpm >= 10.17.1
+- Node.js >= 22 for consumers; repository tooling requires Node 22.22.2+ on
+  Node 22 or Node 24.15.0+ on Node 24 (see `docs/quality/README.md`).
+- pnpm >= 10.24.0
 
 Install dependencies:
 
