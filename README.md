@@ -453,8 +453,8 @@ pnpm run validate
 
 This package is the routing runtime layer in the KoppaJS ecosystem.
 
-Compatibility is tested with published `@koppajs/koppajs-core` 3.0.11,
-`@koppajs/koppajs-vite-plugin` 2.0.0, and Vite 8.3.5 as development-only
+Compatibility is tested with published `@koppajs/koppajs-core` 3.0.12,
+`@koppajs/koppajs-vite-plugin` 2.0.1, and Vite 8.3.5 as development-only
 dependencies. The router has no runtime or peer dependency on these packages.
 Register plugin-built `.kpa` components with `Core.take(component, tag)` and
 initialize `Core()` before `router.init()`. Pass `import.meta.env.BASE_URL` as
