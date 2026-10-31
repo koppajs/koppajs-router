@@ -16,6 +16,17 @@ No unreleased changes.
 
 ---
 
+## [0.1.9]
+
+### Changed
+
+- Translate package-local agent instructions into English without changing
+  their governance or required checks.
+- Validate ecosystem compatibility against Core 3.0.12 and Vite plugin 2.0.1
+  with updated development dependency ranges and lockfile.
+
+---
+
 ## 0.1.8
 
 - refresh the development toolchain to ESLint 10, Vitest 5, JSDOM 30, and

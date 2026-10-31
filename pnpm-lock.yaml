@@ -17,11 +17,11 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.14.0(jiti@2.7.0))
       "@koppajs/koppajs-core":
-        specifier: ^3.0.11
-        version: 3.0.11
+        specifier: ^3.0.12
+        version: 3.0.12
       "@koppajs/koppajs-vite-plugin":
-        specifier: ^2.0.0
-        version: 2.0.0(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.107.1)(yaml@2.9.1))
+        specifier: ^2.0.1
+        version: 2.0.1(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.107.1)(yaml@2.9.1))
       "@types/node":
         specifier: ^24.19.2
         version: 24.19.2
@@ -716,17 +716,17 @@ packages:
         integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==,
       }
 
-  "@koppajs/koppajs-core@3.0.11":
+  "@koppajs/koppajs-core@3.0.12":
     resolution:
       {
-        integrity: sha512-azFcXCFKiFJKngKPQClMDJl3EyYlLCf9Estwpi0Eo5Lx6/ydD/rGZ3VFL19y472pyTWjnp8SsCNL6MbSURrMfg==,
+        integrity: sha512-kN+tLvWcWwH2YamZKGXMI02XwjZ0c+4UQI9hDyQaRQjFUjGpVLtmpZMcl72Lz6OJOWJOOA3OHRcHNf26AJaNbw==,
       }
     engines: { node: ">=22", pnpm: ">=10.24.0" }
 
-  "@koppajs/koppajs-vite-plugin@2.0.0":
+  "@koppajs/koppajs-vite-plugin@2.0.1":
     resolution:
       {
-        integrity: sha512-+QKw/yunkWJRJf8rDdIMRHYDr75A1ZEoLTm1/Nz6eROK4/GORv+96Xk/xpDYBD/LHJUkJG9LhfFKIqN4PRhctA==,
+        integrity: sha512-onXuVKDMqzqUNCqxCO04JWjqGObqY7qEJ7r6hicWKWogICtzjifLuAKOzMTauHf6eWlGaLm9+Q2SbonleVvVhA==,
       }
     engines: { node: ">=22.12.0", pnpm: ">=10.24.0" }
     peerDependencies:
@@ -3140,9 +3140,9 @@ snapshots:
 
   "@keyv/serialize@1.1.1": {}
 
-  "@koppajs/koppajs-core@3.0.11": {}
+  "@koppajs/koppajs-core@3.0.12": {}
 
-  "@koppajs/koppajs-vite-plugin@2.0.0(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.107.1)(yaml@2.9.1))":
+  "@koppajs/koppajs-vite-plugin@2.0.1(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(sass@1.107.1)(yaml@2.9.1))":
     dependencies:
       acorn: 8.19.0
       autoprefixer: 10.6.2(postcss@8.5.32)

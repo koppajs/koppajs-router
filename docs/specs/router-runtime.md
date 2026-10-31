@@ -167,8 +167,8 @@ link-matching behavior, event naming, and scroll behavior.
 ## Ecosystem Compatibility
 
 - The runtime stays independent of Core, the Vite plugin, and Vite.
-- Development-only compatibility coverage uses published Core 3.0.11, Vite
-  plugin 2.0.0, and Vite 8.3.5 (locked through the package lockfile).
+- Development-only compatibility coverage uses published Core 3.0.12, Vite
+  plugin 2.0.1, and Vite 8.3.5 (locked through the package lockfile).
 - A real `.kpa` component must compile through the plugin and mount through
   Core when the router inserts its registered custom element into the outlet.
 - Navigation must preserve subpath URLs, metadata, active links, and component

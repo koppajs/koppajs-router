@@ -1,6 +1,6 @@
 {
   "name": "@koppajs/koppajs-router",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Reusable History API router primitives for KoppaJS applications.",
   "author": "Bastian Bensch",
   "license": "Apache-2.0",
@@ -65,8 +65,8 @@
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "@eslint/js": "^10.0.1",
-    "@koppajs/koppajs-core": "^3.0.11",
-    "@koppajs/koppajs-vite-plugin": "^2.0.0",
+    "@koppajs/koppajs-core": "^3.0.12",
+    "@koppajs/koppajs-vite-plugin": "^2.0.1",
     "@types/node": "^24.19.2",
     "@typescript-eslint/eslint-plugin": "^8.72.1",
     "@typescript-eslint/parser": "^8.72.1",
