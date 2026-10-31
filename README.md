@@ -108,8 +108,8 @@ Consumer requirements:
 
 Local repository requirements:
 
-- Node.js >= 22
-- pnpm >= 10.17.1
+- Node.js 22.22.2+ on Node 22 or 24.15.0+ on Node 24 for repository tooling
+- pnpm >= 10.24.0 (repository pin: 10.24.0)
 
 ---
 
@@ -452,6 +452,14 @@ pnpm run validate
 ## Ecosystem Fit
 
 This package is the routing runtime layer in the KoppaJS ecosystem.
+
+Compatibility is tested with published `@koppajs/koppajs-core` 3.0.11,
+`@koppajs/koppajs-vite-plugin` 2.0.0, and Vite 8.3.5 as development-only
+dependencies. The router has no runtime or peer dependency on these packages.
+Register plugin-built `.kpa` components with `Core.take(component, tag)` and
+initialize `Core()` before `router.init()`. Pass `import.meta.env.BASE_URL` as
+`basePath` for subpath deployments. Core renders asynchronously; a router
+after hook or route-change event is not a component-ready signal.
 
 - `koppajs-core` and application shells can depend on it without inheriting
   website-specific route content

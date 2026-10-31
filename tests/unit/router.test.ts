@@ -1583,7 +1583,7 @@ describe("koppajs-router", () => {
       });
       router.navigate("/services", { scroll: false });
       stopNested();
-      router.onAfterNavigate((() => Promise.resolve()) as unknown as () => void);
+      router.onAfterNavigate(() => Promise.resolve());
       expect(() => router.navigate("/contact", { scroll: false })).toThrow(/synchronous/);
       expect(window.location.pathname).toBe("/contact");
       expect(outlet.querySelector("contact-page")).toBeTruthy();

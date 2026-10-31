@@ -171,6 +171,11 @@ The repository currently builds ESM output into `dist/` through
 [`src/index.ts`](./src/index.ts) remains the authoring source inside the
 repository.
 
+Published Core, Vite plugin, and Vite packages are development-only compatibility
+dependencies. `tests/unit/ecosystem.test.ts` verifies a production KPA build and
+Core custom-element rendering through the existing router boundary; no
+framework import or registration responsibility enters the router runtime.
+
 The published contract is intentionally ESM-only. Consumers import the package
 through standard `import` syntax; CommonJS `require()` is not a supported
 compatibility target for this package.

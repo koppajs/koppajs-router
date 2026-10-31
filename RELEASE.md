@@ -57,8 +57,8 @@ Before cutting a release, ensure all of the following are true:
 
 Tooling expectations for local verification:
 
-- Node.js 22 or newer
-- pnpm 10.17.1 or newer
+- Node.js 22.22.2+ on Node 22 or 24.15.0+ on Node 24
+- pnpm 10.24.0 or newer (repository pin: 10.24.0)
 - CI and release workflows activate the `packageManager` pnpm version through
   Node.js Corepack after `actions/setup-node` has selected the job's Node.js
   version.

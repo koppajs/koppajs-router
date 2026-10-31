@@ -16,6 +16,16 @@ No unreleased changes.
 
 ---
 
+## 0.1.8
+
+- refresh the development toolchain to ESLint 10, Vitest 5, JSDOM 30, and
+  TypeScript 6, retaining the supported Node 24 typings line
+- align pnpm with Core and the Vite plugin at 10.24.0 and verify published
+  Core 3.0.11 / Vite plugin 2.0.0 / Vite 8.3.5 through a real KPA build and
+  router lifecycle integration test without adding runtime dependencies
+
+---
+
 ## 0.1.7
 
 - add optional typed `isLinkActive(link, currentRoute)` rules shared by initial,
